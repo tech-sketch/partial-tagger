@@ -33,7 +33,7 @@ def test_crf_tagger_forward_returns_correct_shape(
 ) -> None:
     (batch_size, sequence_length, num_tags), logits, _, _ = test_data_for_shape_check
 
-    tagger = CRFTagger(num_tags, DummyFeatureExtractor(), num_tags, False)
+    tagger = CRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
 
     max_probabilities, tag_indices = tagger(logits)
 
@@ -58,7 +58,7 @@ def test_partial_crf_tagger_compute_loss_returns_correct_shape(
 ) -> None:
     (batch_size, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
 
-    tagger = PartialCRFTagger(num_tags, DummyFeatureExtractor(), num_tags, False)
+    tagger = PartialCRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
 
     loss = tagger.compute_loss(logits, tag_bitmap)
 
