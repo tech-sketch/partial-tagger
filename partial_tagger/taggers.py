@@ -31,7 +31,7 @@ class CRFTagger(nn.Module):
         if feature_size != num_tags and not use_kernel:
             raise ValueError(
                 "Feature size doesn't match with num_tags."
-                "Please fix size or set use_kernel True."
+                "Please fix feature_size or set use_kernel True."
             )
 
         super().__init__()
