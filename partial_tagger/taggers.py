@@ -83,7 +83,7 @@ class CRFTagger(nn.Module):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A tensor representing loss.
+            A [batch_size] float tensor representing loss.
         """
         features = self.feature_extractor(inputs, mask)
 
@@ -119,7 +119,7 @@ class PartialCRFTagger(CRFTagger):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A tensor representing loss.
+            A [batch_size] float tensor representing loss.
         """
         features = self.feature_extractor(inputs, mask)
 

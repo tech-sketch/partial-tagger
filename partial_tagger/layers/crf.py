@@ -24,7 +24,8 @@ class CRF(nn.Module):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A tensor representing log potentials.
+            A [batch_size, sequence_length - 1, num_tag, num_tags] float tensor
+            representing log potentials.
         """
         batch_size, sequence_length, num_tags = logits.size()
         return torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
@@ -40,6 +41,9 @@ class CRF(nn.Module):
 
         Returns:
             A tuple of tensors.
+            A [batch_size] float tensor representing the maximum probabilities
+            and A [batch_size,  sequence_length] integer tensor representing
+            the tag sequence.
         """
         batch_size, sequence_length, num_tags = logits.size()
         return torch.randn(batch_size), torch.randint(

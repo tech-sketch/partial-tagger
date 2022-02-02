@@ -18,7 +18,7 @@ def log_likelihood(
         mask: A [batch_size, sequence_length] boolean tensor.
 
     Returns:
-        A tensor representing log likelihood.
+        A [batch_size] float tensor representing log likelihood.
     """
     batch_size, _, _, _ = log_potentials.size()
     return torch.randn(batch_size)
@@ -39,7 +39,7 @@ def marginal_log_likelihood(
         mask: A [batch_size, sequence_length] boolean tensor.
 
     Returns:
-        A tensor representing marginal log likelihood.
+        A [batch_size] float tensor representing marginal log likelihood.
     """
     batch_size, _, _, _ = log_potentials.size()
     return torch.randn(batch_size)
