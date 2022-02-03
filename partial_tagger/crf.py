@@ -46,8 +46,11 @@ def marginal_log_likelihood(
     Returns:
         A [batch_size] float tensor representing marginal log likelihood.
     """
-    batch_size, _, _, _ = log_potentials.size()
-    return torch.randn(batch_size)
+
+    score = multitag_sequence_score(log_potentials, tag_bitmap, mask)
+    log_Z = forward_algorithm(log_potentials)
+
+    return score - log_Z
 
 
 def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tensor:
@@ -130,6 +133,33 @@ def sequence_score(
     tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
 
     return log_potentials.mul(tag_matrix).sum(dim=(1, 2, 3))
+
+
+def multitag_sequence_score(
+    log_potentials: torch.Tensor,
+    tag_bitmap: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+) -> torch.Tensor:
+    """Computes the sequence score of all tag sequences matching.
+
+    Args:
+        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        float tensor.
+        tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
+        indicating all active tags at each index.
+        mask: A [batch_size, sequence_length] boolean tensor.
+
+    Returns:
+        A [batch_size] float tensor representing the sequence score.
+    """
+    if mask is None:
+        mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
+
+    tag_bitmap = tag_bitmap | (~mask[..., None])
+    tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
+
+    constrained_log_potentials = log_potentials * tag_matrix + NINF * (~tag_matrix)
+    return forward_algorithm(constrained_log_potentials)
 
 
 def to_tag_bitmap(tag_indices: torch.Tensor, num_tags: int) -> torch.Tensor:

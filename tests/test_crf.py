@@ -23,20 +23,13 @@ def test_marginal_log_likelihood_returns_correct_shape(
     )
 
 
-def test_total_likelihood_equals_to_one(
-    test_data_by_hand_for_crf_functions: tuple,
-) -> None:
-    (
-        (batch_size, sequence_length, num_tags),
-        log_potentials,
-        _,
-    ) = test_data_by_hand_for_crf_functions
+def test_total_likelihood_equals_to_one(test_data_small: tuple) -> None:
+    (batch_size, sequence_length, num_tags), log_potentials = test_data_small
 
     total_log_p = torch.tensor([crf.NINF] * batch_size)
-    for tag_indices in helpers.iterate_possible_tag_indices(num_tags, sequence_length):
-        tag_bitmap = crf.to_tag_bitmap(
-            torch.tensor([tag_indices] * batch_size), num_tags
-        )
+    for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(
+        batch_size, sequence_length, num_tags
+    ):
         total_log_p = torch.logaddexp(
             total_log_p, crf.log_likelihood(log_potentials, tag_bitmap)
         )
@@ -44,10 +37,39 @@ def test_total_likelihood_equals_to_one(
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
 
 
-def test_forward_algorithm_returns_value_same_as_brute_force(
-    test_data_by_hand_for_crf_functions: tuple,
+def test_marginal_likelihood_equals_to_one_if_all_tags_are_active(
+    test_data_small: tuple,
 ) -> None:
-    _, log_potentials, _ = test_data_by_hand_for_crf_functions
+
+    (batch_size, sequence_length, num_tags), log_potentials = test_data_small
+
+    tag_bitmap = torch.ones((batch_size, sequence_length, num_tags), dtype=torch.bool)
+    log_p = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
+
+    assert torch.allclose(
+        log_p.exp(),
+        torch.ones_like(log_p),
+    )
+
+
+def test_marginal_log_likelihood_matches_log_likelihood_if_one_hot_tag_is_given(
+    test_data_small: tuple,
+) -> None:
+    (batch_size, sequence_length, num_tags), log_potentials = test_data_small
+
+    for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(
+        batch_size, sequence_length, num_tags
+    ):
+        a = crf.log_likelihood(log_potentials, tag_bitmap)
+        b = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
+
+        assert torch.allclose(a, b)
+
+
+def test_forward_algorithm_returns_value_same_as_brute_force(
+    test_data_small: tuple,
+) -> None:
+    _, log_potentials = test_data_small
 
     log_Z = crf.forward_algorithm(log_potentials)
     expected_log_Z = helpers.compute_log_normalizer_by_brute_force(log_potentials)
@@ -55,10 +77,8 @@ def test_forward_algorithm_returns_value_same_as_brute_force(
     assert torch.allclose(log_Z, expected_log_Z)
 
 
-def test_amax_returns_value_same_as_brute_force(
-    test_data_by_hand_for_crf_functions: tuple,
-) -> None:
-    _, log_potentials, _ = test_data_by_hand_for_crf_functions
+def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
+    _, log_potentials = test_data_small
 
     max_score = crf.amax(log_potentials)
     expected_max_score, _ = helpers.compute_best_tag_indices_by_brute_force(
