@@ -22,8 +22,11 @@ def log_likelihood(
     Returns:
         A [batch_size] float tensor representing log likelihood.
     """
-    batch_size, _, _, _ = log_potentials.size()
-    return torch.randn(batch_size)
+
+    score = sequence_score(log_potentials, tag_bitmap, mask)
+    log_Z = forward_algorithm(log_potentials)
+
+    return score - log_Z
 
 
 def marginal_log_likelihood(
@@ -101,3 +104,46 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
         A [batch_size] float tensor representing the maximum score.
     """
     return normalize(log_potentials, torch.amax)
+
+
+def sequence_score(
+    log_potentials: torch.Tensor,
+    tag_bitmap: torch.Tensor,
+    mask: Optional[torch.Tensor] = None,
+) -> torch.Tensor:
+    """Computes the sequence score based on the given tag_bitmap.
+
+    Args:
+        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        float tensor.
+        tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
+        indicating an active tag at each index.
+        mask: A [batch_size, sequence_length] boolean tensor.
+
+    Returns:
+        A [batch_size] float tensor representing the sequence score.
+    """
+    if mask is None:
+        mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
+
+    tag_bitmap = tag_bitmap & mask[..., None]
+    tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
+
+    return log_potentials.mul(tag_matrix).sum(dim=(1, 2, 3))
+
+
+def to_tag_bitmap(tag_indices: torch.Tensor, num_tags: int) -> torch.Tensor:
+    """Computes tag_bitmap from the given tag_indices.
+
+    Args:
+        tag_indices: A [batch_size, sequence_length] integer tensor.
+        num_tags: An integer value representing the number of tags.
+
+    Returns:
+        A [batch_size, sequence_length, num_tags] boolean tensor.
+        indicating an active tag at each index.
+    """
+    tag_bitmap = torch.arange(num_tags, device=tag_indices.device)[None, None].eq(
+        tag_indices[..., None]
+    )
+    return tag_bitmap
