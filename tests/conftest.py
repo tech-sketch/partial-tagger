@@ -12,3 +12,64 @@ def test_data_for_shape_check() -> tuple:
     y = torch.randint(0, num_tags, (batch_size, sequence_length))
     tag_bitmap = torch.nn.functional.one_hot(y, num_tags).bool()
     return (batch_size, sequence_length, num_tags), logits, log_potentials, tag_bitmap
+
+
+@pytest.fixture
+def test_data_by_hand_for_crf_functions() -> tuple:
+    batch_size = 2
+    sequence_length = 3
+    num_tags = 5
+    log_potentials = torch.tensor(
+        [
+            [
+                [
+                    # O   B-X  I-X  B-Y  I-Y
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # O
+                    [0.0, 0.0, 1.0, 0.0, 0.0],  # B-X
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # I-X
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # B-Y
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # I-Y
+                ],
+                [
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # O
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # B-X
+                    [0.0, 0.0, 0.0, 1.0, 0.0],  # I-X
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # B-Y
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # I-Y
+                ],
+            ],
+            [
+                [
+                    # O   B-X  I-X  B-Y  I-Y
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # O
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # B-X
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # I-X
+                    [0.0, 0.0, 0.0, 0.0, 1.0],  # B-Y
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # I-Y
+                ],
+                [
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # O
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # B-X
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # I-X
+                    [0.0, 0.0, 0.0, 0.0, 0.0],  # B-Y
+                    [0.0, 0.0, 0.0, 0.0, 1.0],  # I-Y
+                ],
+            ],
+        ]
+    )
+    tag_bitmap = torch.tensor(
+        [
+            [
+                # O     B-X   I-X    B-Y    I-Y
+                [False, True, False, False, False],
+                [False, False, True, False, False],
+                [False, False, False, True, False],
+            ],
+            [
+                [False, False, False, True, False],
+                [False, False, False, False, True],
+                [False, False, False, False, True],
+            ],
+        ]
+    )
+    return (batch_size, sequence_length, num_tags), log_potentials, tag_bitmap
