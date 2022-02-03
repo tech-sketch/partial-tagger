@@ -75,3 +75,33 @@ def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
         )
 
     return torch.logsumexp(log_potentials, dim=(-1, -2)).squeeze(dim=-1)
+
+
+def amax(log_potentials: torch.Tensor) -> torch.Tensor:
+    """Computes the maximum score for a CRF.
+
+    Args:
+        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        float tensor.
+
+    Returns:
+        A [batch_size] float tensor representing the maximum score.
+    """
+    batch_size, sequence_length, num_tags, _ = log_potentials.size()
+
+    n = sequence_length.bit_length()
+    padding_length = (1 << n) - sequence_length
+    value = (1 - torch.eye(num_tags, num_tags, device=log_potentials.device)) * NINF
+
+    log_potentials = torch.cat(
+        (log_potentials, value[None, None].repeat(batch_size, padding_length, 1, 1)),
+        dim=1,
+    )
+
+    for _ in range(n):
+        log_potentials = torch.amax(
+            log_potentials[:, 0::2, ..., None] + log_potentials[:, 1::2, None, ...],
+            dim=-2,
+        )
+
+    return torch.amax(log_potentials, dim=(-1, -2)).squeeze(dim=-1)
