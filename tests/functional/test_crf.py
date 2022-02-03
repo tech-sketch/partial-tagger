@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from partial_tagger import crf
+from partial_tagger.functional import crf
 from tests import helpers
 
 

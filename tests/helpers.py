@@ -3,7 +3,7 @@ from typing import Generator, Tuple
 
 import torch
 
-from partial_tagger.crf import NINF
+from partial_tagger.functional.crf import NINF
 
 
 def iterate_possible_tag_indices(
