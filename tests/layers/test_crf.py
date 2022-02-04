@@ -50,3 +50,27 @@ def test_crf_forward_returns_log_potentials_yield_likelihood_valid_as_probabilit
         )
 
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
+
+
+def test_crf_max_returns_correct_tag_indices(
+    model: CRF, test_data_by_hand: tuple
+) -> None:
+    _, logits, expected_tag_indices = test_data_by_hand
+
+    _, tag_indices = model.max(logits)
+
+    assert torch.equal(tag_indices, expected_tag_indices)
+
+
+def test_crf_max_returns_score_valid_as_probability(
+    model: CRF, test_data_by_hand: tuple
+) -> None:
+    _, logits, tag_indices = test_data_by_hand
+    log_potentials = model(logits)
+    expected_log_p = crf.log_likelihood(
+        log_potentials, crf.to_tag_bitmap(tag_indices, log_potentials.size(-1))
+    )
+
+    max_log_p, _ = model.max(logits)
+
+    assert torch.allclose(max_log_p, expected_log_p)
