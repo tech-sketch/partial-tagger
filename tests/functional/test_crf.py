@@ -41,9 +41,9 @@ def test_marginal_likelihood_equals_to_one_if_all_tags_are_active(
     test_data_small: tuple,
 ) -> None:
 
-    (batch_size, sequence_length, num_tags), log_potentials = test_data_small
+    shape, log_potentials = test_data_small
 
-    tag_bitmap = torch.ones((batch_size, sequence_length, num_tags), dtype=torch.bool)
+    tag_bitmap = torch.ones(shape, dtype=torch.bool)
     log_p = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
 
     assert torch.allclose(
@@ -52,14 +52,12 @@ def test_marginal_likelihood_equals_to_one_if_all_tags_are_active(
     )
 
 
-def test_marginal_log_likelihood_matches_log_likelihood_if_one_hot_tag_is_given(
+def test_marginal_log_likelihood_matches_log_likelihood_if_one_hot_tag_bitmap_is_given(
     test_data_small: tuple,
 ) -> None:
-    (batch_size, sequence_length, num_tags), log_potentials = test_data_small
+    shape, log_potentials = test_data_small
 
-    for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(
-        batch_size, sequence_length, num_tags
-    ):
+    for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(*shape):
         a = crf.log_likelihood(log_potentials, tag_bitmap)
         b = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
 

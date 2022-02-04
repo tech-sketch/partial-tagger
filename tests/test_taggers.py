@@ -20,7 +20,7 @@ class DummyFeatureExtractor(nn.Module):
             return inputs
 
 
-def test_crf_tagger_raises_value_error() -> None:
+def test_crf_tagger_raises_value_error_if_feature_vector_cannot_feed_into_crf() -> None:
     feature_size = 256
     num_tags = 5
 
