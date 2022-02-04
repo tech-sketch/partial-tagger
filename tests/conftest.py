@@ -21,3 +21,40 @@ def test_data_small() -> tuple:
     num_tags = 5
     log_potentials = torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
     return (batch_size, sequence_length, num_tags), log_potentials
+
+
+@pytest.fixture
+def transitions() -> torch.Tensor:
+    return torch.tensor(
+        [
+            # O   B-X  I-X  B-Y  I-Y
+            [0.0, 1.0, 0.0, 0.0, 0.0],  # O
+            [0.0, 0.0, 1.0, 0.0, 0.0],  # B-X
+            [0.0, 0.0, 0.0, 1.0, 0.0],  # I-X
+            [0.0, 0.0, 0.0, 0.0, 1.0],  # B-Y
+            [1.0, 0.0, 0.0, 0.0, 0.0],  # I-Y
+        ]
+    )
+
+
+@pytest.fixture
+def test_data_by_hand() -> tuple:
+    batch_size = 2
+    sequence_length = 3
+    num_tags = 5
+    logits = torch.tensor(
+        [
+            [
+                [0.0, 1.0, 0.0, 0.0, 0.0],
+                [0.0, 0.0, 1.0, 0.0, 0.0],
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+            ],
+            [
+                [0.0, 0.0, 0.0, 1.0, 0.0],
+                [0.0, 0.0, 0.0, 0.0, 1.0],
+                [0.0, 0.0, 0.0, 0.0, 100.0],
+            ],
+        ]
+    )
+    tag_indices = torch.tensor([[1, 2, 3], [3, 4, 4]])
+    return (batch_size, sequence_length, num_tags), logits, tag_indices

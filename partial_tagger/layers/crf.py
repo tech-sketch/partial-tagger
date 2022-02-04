@@ -3,6 +3,8 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
+from partial_tagger.functional import crf
+
 
 class CRF(nn.Module):
     """A CRF layer.
@@ -12,12 +14,16 @@ class CRF(nn.Module):
     """
 
     def __init__(self, num_tags: int) -> None:
-        super().__init__()
+        super(CRF, self).__init__()
+
+        self.transitions = nn.Parameter(torch.empty(num_tags, num_tags))
+
+        nn.init.xavier_normal_(self.transitions)
 
     def forward(
         self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        """Computes log potentials.
+        """Computes log potentials for a CRF.
 
         Args:
             logits: A [batch_size, sequence_length, num_tags] float tensor.
@@ -27,8 +33,19 @@ class CRF(nn.Module):
             A [batch_size, sequence_length - 1, num_tag, num_tags] float tensor
             representing log potentials.
         """
-        batch_size, sequence_length, num_tags = logits.size()
-        return torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
+        if mask is None:
+            mask = logits.new_ones(logits.shape[:-1], dtype=torch.bool)
+
+        log_potentials = logits[:, 1:, None, :] + self.transitions[None, None]
+        log_potentials[:, 0] += logits[:, 0, :, None]
+
+        num_tags = log_potentials.size(-1)
+        value = crf.NINF * (
+            1 - torch.eye(num_tags, num_tags, device=log_potentials.device)
+        )
+        mask = mask[:, 1:, None, None]
+
+        return log_potentials * mask + value * (~mask)
 
     def max(
         self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None
