@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 import torch
 
-NINF = -1e5
+NINF = -(2**15.0)
 
 
 def log_likelihood(
