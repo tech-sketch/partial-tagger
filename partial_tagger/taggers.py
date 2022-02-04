@@ -3,7 +3,7 @@ from typing import Any, Dict, List, Optional, Tuple, Union
 import torch
 from torch import nn
 
-from partial_tagger import crf
+from partial_tagger.functional import crf
 from partial_tagger.layers import CRF
 
 TaggerInputs = Union[
