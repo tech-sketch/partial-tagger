@@ -23,7 +23,7 @@ def test_marginal_log_likelihood_returns_correct_shape(
     )
 
 
-def test_total_likelihood_equals_to_one(test_data_small: tuple) -> None:
+def test_log_likelihood_valid_as_probability(test_data_small: tuple) -> None:
     (batch_size, sequence_length, num_tags), log_potentials = test_data_small
 
     total_log_p = torch.tensor([crf.NINF] * batch_size)
@@ -37,9 +37,7 @@ def test_total_likelihood_equals_to_one(test_data_small: tuple) -> None:
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
 
 
-def test_marginal_likelihood_equals_to_one_if_all_tags_are_active(
-    test_data_small: tuple,
-) -> None:
+def test_marginal_log_likelihood_valid_as_probability(test_data_small: tuple) -> None:
 
     shape, log_potentials = test_data_small
 
