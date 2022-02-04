@@ -3,6 +3,8 @@ from typing import Optional, Tuple
 import torch
 from torch import nn
 
+from partial_tagger.functional import crf
+
 
 class CRF(nn.Module):
     """A CRF layer.
@@ -12,12 +14,16 @@ class CRF(nn.Module):
     """
 
     def __init__(self, num_tags: int) -> None:
-        super().__init__()
+        super(CRF, self).__init__()
+
+        self.transitions = nn.Parameter(torch.empty(num_tags, num_tags))
+
+        nn.init.xavier_normal_(self.transitions)
 
     def forward(
         self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
-        """Computes log potentials.
+        """Computes log potentials for a CRF.
 
         Args:
             logits: A [batch_size, sequence_length, num_tags] float tensor.
@@ -27,25 +33,69 @@ class CRF(nn.Module):
             A [batch_size, sequence_length - 1, num_tag, num_tags] float tensor
             representing log potentials.
         """
-        batch_size, sequence_length, num_tags = logits.size()
-        return torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
+        if mask is None:
+            mask = self.compute_mask_from_logits(logits)
+
+        log_potentials = logits[:, 1:, None, :] + self.transitions[None, None]
+        log_potentials[:, 0] += logits[:, 0, :, None]
+
+        num_tags = log_potentials.size(-1)
+        value = crf.NINF * (
+            1 - torch.eye(num_tags, num_tags, device=log_potentials.device)
+        )
+        mask = mask[:, 1:, None, None]
+
+        return log_potentials * mask + value * (~mask)
 
     def max(
-        self, logits: torch.Tensor, mask: Optional[torch.Tensor] = None
+        self,
+        logits: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+        padding_index: Optional[int] = -1,
     ) -> Tuple[torch.Tensor, torch.Tensor]:
         """Computes the tag sequence gives the maximum probability for logits.
 
         Args:
             logits: A [batch_size, sequence_length, num_tags] float tensor.
             mask: A [batch_size, sequence_length] boolean tensor.
+            padding_index: An integer for padded elements.
 
         Returns:
             A tuple of tensors.
-            A [batch_size] float tensor representing the maximum probabilities
+            A [batch_size] float tensor representing the maximum log probabilities
             and A [batch_size,  sequence_length] integer tensor representing
             the tag sequence.
         """
-        batch_size, sequence_length, num_tags = logits.size()
-        return torch.randn(batch_size), torch.randint(
-            0, num_tags, (batch_size, sequence_length)
+        if mask is None:
+            mask = self.compute_mask_from_logits(logits)
+
+        with torch.enable_grad():
+            log_potentials = self(logits, mask)
+
+        max_score = crf.amax(log_potentials)
+
+        (tag_matrix,) = torch.autograd.grad(max_score.sum(), log_potentials)
+        tag_matrix = tag_matrix.long()
+
+        tag_bitmap = torch.cat(
+            (tag_matrix.sum(dim=-1), tag_matrix[:, [-1]].sum(dim=-2)), dim=1
         )
+
+        tag_indices = tag_bitmap.argmax(dim=-1)
+        tag_indices = tag_indices * mask + padding_index * (~mask)
+
+        log_Z = crf.forward_algorithm(log_potentials)
+
+        return max_score - log_Z, tag_indices
+
+    @staticmethod
+    def compute_mask_from_logits(logits: torch.Tensor) -> torch.Tensor:
+        """Computes a mask tensor.
+
+        Args:
+            logits: A [batch_size, sequence_length, num_tags] float tensor.
+
+        Returns:
+            A [batch_size, sequence_length] boolean tensor.
+        """
+        return logits.new_ones(logits.shape[:-1], dtype=torch.bool)
