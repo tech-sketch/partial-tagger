@@ -34,7 +34,7 @@ class CRF(nn.Module):
             representing log potentials.
         """
         if mask is None:
-            mask = logits.new_ones(logits.shape[:-1], dtype=torch.bool)
+            mask = self.compute_mask_from_logits(logits)
 
         log_potentials = logits[:, 1:, None, :] + self.transitions[None, None]
         log_potentials[:, 0] += logits[:, 0, :, None]
@@ -66,3 +66,15 @@ class CRF(nn.Module):
         return torch.randn(batch_size), torch.randint(
             0, num_tags, (batch_size, sequence_length)
         )
+
+    @staticmethod
+    def compute_mask_from_logits(logits: torch.Tensor) -> torch.Tensor:
+        """Computes a mask tensor.
+
+        Args:
+            logits: A [batch_size, sequence_length, num_tags] float tensor.
+
+        Returns:
+            A [batch_size, sequence_length] boolean tensor.
+        """
+        return logits.new_ones(logits.shape[:-1], dtype=torch.bool)
