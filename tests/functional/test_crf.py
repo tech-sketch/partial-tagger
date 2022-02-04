@@ -7,20 +7,22 @@ from tests import helpers
 
 def test_log_likelihood_returns_correct_shape(test_data_for_shape_check: tuple) -> None:
     (batch_size, _, _), _, log_potentials, tag_bitmap = test_data_for_shape_check
+    expected_size = torch.Size([batch_size])
 
-    assert crf.log_likelihood(log_potentials, tag_bitmap).size() == torch.Size(
-        [batch_size]
-    )
+    log_p = crf.log_likelihood(log_potentials, tag_bitmap)
+
+    assert log_p.size() == expected_size
 
 
 def test_marginal_log_likelihood_returns_correct_shape(
     test_data_for_shape_check: tuple,
 ) -> None:
     (batch_size, _, _), _, log_potentials, tag_bitmap = test_data_for_shape_check
+    expected_size = torch.Size([batch_size])
 
-    assert crf.marginal_log_likelihood(log_potentials, tag_bitmap).size() == torch.Size(
-        [batch_size]
-    )
+    log_p = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
+
+    assert log_p.size() == expected_size
 
 
 def test_log_likelihood_valid_as_probability(test_data_small: tuple) -> None:
@@ -44,10 +46,7 @@ def test_marginal_log_likelihood_valid_as_probability(test_data_small: tuple) ->
     tag_bitmap = torch.ones(shape, dtype=torch.bool)
     log_p = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
 
-    assert torch.allclose(
-        log_p.exp(),
-        torch.ones_like(log_p),
-    )
+    assert torch.allclose(log_p.exp(), torch.ones_like(log_p))
 
 
 def test_marginal_log_likelihood_matches_log_likelihood_if_one_hot_tag_bitmap_is_given(
