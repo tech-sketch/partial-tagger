@@ -62,9 +62,9 @@ class CRFTagger(nn.Module):
             and A [batch_size,  sequence_length] integer tensor representing
             the tag sequence.
         """
-        features = self.feature_extractor(inputs, mask)
-
-        logits = self.kernel(features)
+        with torch.no_grad():
+            features = self.feature_extractor(inputs, mask)
+            logits = self.kernel(features)
 
         return self.crf_layer.max(logits, mask)
 
