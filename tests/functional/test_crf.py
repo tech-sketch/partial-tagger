@@ -84,7 +84,7 @@ def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
 
 
 @pytest.mark.parametrize(
-    "tag_indices, num_tags, expected",
+    "tag_indices, num_tags, expected, partial_index",
     [
         (
             torch.tensor([[0, 1, 2, 3, 4]]),
@@ -100,15 +100,32 @@ def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
                     ]
                 ]
             ),
+            None,
         ),
+        (torch.tensor([-100, -1, 5, 100]), 5, torch.tensor([[[False] * 5] * 4]), None),
         (
-            torch.tensor([-100, -1, 5, 100]),
+            torch.tensor([[0, 1, 2, 3, 4, -1, -1]]),
             5,
-            torch.tensor([[[False] * 5] * 4]),
+            torch.tensor(
+                [
+                    [
+                        [True, False, False, False, False],
+                        [False, True, False, False, False],
+                        [False, False, True, False, False],
+                        [False, False, False, True, False],
+                        [False, False, False, False, True],
+                        [True, True, True, True, True],
+                        [True, True, True, True, True],
+                    ]
+                ]
+            ),
+            -1,
         ),
     ],
 )
 def test_tag_bitmap_returns_expected_value(
-    tag_indices: torch.Tensor, num_tags: int, expected: torch.Tensor
+    tag_indices: torch.Tensor, num_tags: int, expected: torch.Tensor, partial_index: int
 ) -> None:
-    assert torch.equal(crf.to_tag_bitmap(tag_indices, num_tags), expected)
+    assert torch.equal(
+        crf.to_tag_bitmap(tag_indices, num_tags, partial_index), expected
+    )
