@@ -91,7 +91,7 @@ class CRFTagger(nn.Module):
 
         log_potentials = self.crf_layer(logits, mask)
 
-        return crf.log_likelihood(log_potentials, y, mask).neg()
+        return crf.log_likelihood(log_potentials, y, mask).sum().neg()
 
 
 class PartialCRFTagger(CRFTagger):
@@ -127,7 +127,7 @@ class PartialCRFTagger(CRFTagger):
 
         log_potentials = self.crf_layer(logits, mask)
 
-        return crf.marginal_log_likelihood(log_potentials, y, mask).neg()
+        return crf.marginal_log_likelihood(log_potentials, y, mask).sum().neg()
 
 
 class EERPartialCRFTagger(CRFTagger):
@@ -204,7 +204,7 @@ class EERPartialCRFTagger(CRFTagger):
             min=0,
         )
 
-        return log_Z - score + self.eer_loss_weight * eer_loss
+        return (log_Z - score).sum() + self.eer_loss_weight * eer_loss
 
     @staticmethod
     def _marginal_probability(
