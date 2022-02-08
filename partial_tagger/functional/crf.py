@@ -2,7 +2,7 @@ from typing import Callable, Optional
 
 import torch
 
-NINF = -(2**15.0)
+NINF = torch.finfo(torch.float16).min
 
 
 def log_likelihood(
