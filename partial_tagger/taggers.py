@@ -201,7 +201,7 @@ class EERPartialCRFTagger(CRFTagger):
         eer_loss = torch.clamp(
             (expected_entity_ratio - self.entity_ratio).abs()
             - self.entity_ratio_margin,
-            0,
+            min=0,
         )
 
         return log_Z - score + self.eer_loss_weight * eer_loss
