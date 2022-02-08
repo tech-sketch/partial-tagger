@@ -162,12 +162,15 @@ def multitag_sequence_score(
     return forward_algorithm(constrained_log_potentials)
 
 
-def to_tag_bitmap(tag_indices: torch.Tensor, num_tags: int) -> torch.Tensor:
+def to_tag_bitmap(
+    tag_indices: torch.Tensor, num_tags: int, partial_index: Optional[int] = None
+) -> torch.Tensor:
     """Computes tag_bitmap from the given tag_indices.
 
     Args:
         tag_indices: A [batch_size, sequence_length] integer tensor.
         num_tags: An integer value representing the number of tags.
+        partial_index: An integer value representing the index for partial label.
 
     Returns:
         A [batch_size, sequence_length, num_tags] boolean tensor.
@@ -176,4 +179,9 @@ def to_tag_bitmap(tag_indices: torch.Tensor, num_tags: int) -> torch.Tensor:
     tag_bitmap = torch.arange(num_tags, device=tag_indices.device)[None, None].eq(
         tag_indices[..., None]
     )
-    return tag_bitmap
+
+    if partial_index is None:
+        return tag_bitmap
+
+    partial_mask = tag_indices.eq(partial_index)
+    return tag_bitmap ^ partial_mask[..., None]
