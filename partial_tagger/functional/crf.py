@@ -1,4 +1,4 @@
-from typing import Callable, Optional
+from typing import Callable, Optional, Tuple
 
 import torch
 
@@ -107,6 +107,35 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
         A [batch_size] float tensor representing the maximum score.
     """
     return normalize(log_potentials, torch.amax)
+
+
+def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
+    """Computes the tag sequence gives the maximum probability for log potentials.
+
+    Args:
+        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        float tensor.
+
+    Returns:
+        A tuple of tensors. The first tensor is a [batch_size] float tensor
+        representing the maximum log probability. The second tensor is
+        a [batch_size, sequence_length] integer tensor representing the tag sequence.
+    """
+    max_score = amax(log_potentials)
+    (tag_matrix,) = torch.autograd.grad(
+        max_score.sum(), log_potentials, allow_unused=True
+    )
+    tag_matrix = tag_matrix.long()
+
+    tag_bitmap = torch.cat(
+        (tag_matrix.sum(dim=-1), tag_matrix[:, [-1]].sum(dim=-2)), dim=1
+    )
+
+    tag_indices = tag_bitmap.argmax(dim=-1)
+
+    log_Z = forward_algorithm(log_potentials)
+
+    return max_score - log_Z, tag_indices
 
 
 def sequence_score(
