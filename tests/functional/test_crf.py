@@ -99,6 +99,42 @@ def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> Non
 
 
 @pytest.mark.parametrize(
+    "mask, start_constraints, end_constraints, transition_constraints",
+    [
+        (
+            torch.ones((3, 20), dtype=torch.bool),
+            torch.tensor([True, False, False, True, True]),  # 0, 3, 4 are allowed
+            torch.tensor([False, True, True, False, False]),  # 2, 3 are allowed
+            torch.tensor(
+                [
+                    [True, False, True, True, True],  # 0->1 is not allowed
+                    [True, True, True, True, True],  # no constraints
+                    [True, True, False, True, True],  # 2->2 is not allowed
+                    [True, False, True, True, True],  # 3->1 is not allowed
+                    [True, False, False, False, False],  # only 4->0 is allowed
+                ]
+            ),
+        )
+    ],
+)
+def test_constrained_decode_returns_tag_indices_under_constraints(
+    mask: torch.Tensor,
+    start_constraints: torch.Tensor,
+    end_constraints: torch.Tensor,
+    transition_constraints: torch.Tensor,
+) -> None:
+    log_potentials = torch.randn(3, 19, 5, 5, requires_grad=True)
+
+    _, tag_indices = crf.constrained_decode(
+        log_potentials, mask, start_constraints, end_constraints, transition_constraints
+    )
+
+    assert helpers.check_tag_indices_satisfies_constraints(
+        tag_indices, start_constraints, end_constraints, transition_constraints
+    )
+
+
+@pytest.mark.parametrize(
     "tag_indices, num_tags, expected, partial_index",
     [
         (
