@@ -83,6 +83,21 @@ def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
     assert torch.allclose(max_score, expected_max_score)
 
 
+def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
+    _, log_potentials = test_data_small
+
+    max_log_probability, tag_indices = crf.decode(log_potentials)
+
+    max_score, expected_tag_indices = helpers.compute_best_tag_indices_by_brute_force(
+        log_potentials
+    )
+    log_Z = helpers.compute_log_normalizer_by_brute_force(log_potentials)
+    expected_max_log_probability = max_score - log_Z
+
+    assert torch.allclose(max_log_probability, expected_max_log_probability)
+    assert torch.allclose(tag_indices, expected_tag_indices)
+
+
 @pytest.mark.parametrize(
     "tag_indices, num_tags, expected, partial_index",
     [
