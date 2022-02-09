@@ -72,21 +72,11 @@ class CRF(nn.Module):
         with torch.enable_grad():
             log_potentials = self(logits, mask)
 
-        max_score = crf.amax(log_potentials)
+        max_log_probability, tag_indices = crf.decode(log_potentials)
 
-        (tag_matrix,) = torch.autograd.grad(max_score.sum(), log_potentials)
-        tag_matrix = tag_matrix.long()
-
-        tag_bitmap = torch.cat(
-            (tag_matrix.sum(dim=-1), tag_matrix[:, [-1]].sum(dim=-2)), dim=1
-        )
-
-        tag_indices = tag_bitmap.argmax(dim=-1)
         tag_indices = tag_indices * mask + padding_index * (~mask)
 
-        log_Z = crf.forward_algorithm(log_potentials)
-
-        return max_score - log_Z, tag_indices
+        return max_log_probability, tag_indices
 
     @staticmethod
     def compute_mask_from_logits(logits: torch.Tensor) -> torch.Tensor:
