@@ -192,7 +192,7 @@ class EERPartialCRFTagger(CRFTagger):
         log_Z = crf.forward_algorithm(log_potentials)
 
         # expected entity ratio
-        p = self._marginal_probability(log_Z, log_potentials).sum(dim=-1)
+        (p,) = torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)
         expected_entity_count = (
             p[:, :, : self.outside_index].sum()
             + p[:, :, self.outside_index + 1 :].sum()
@@ -205,20 +205,3 @@ class EERPartialCRFTagger(CRFTagger):
         )
 
         return (log_Z - score).sum() + self.eer_loss_weight * eer_loss
-
-    @staticmethod
-    def _marginal_probability(
-        log_Z: torch.Tensor, log_potentials: torch.Tensor
-    ) -> torch.Tensor:
-        """Computes marginal probability for a CRF.
-
-        Args:
-            log_Z: A [batch_size] float tensor representing the log normalizer.
-            log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
-            float tensor.
-
-        Returns:
-            A [batch_size, sequence_length - 1, num_tags, num_tags] float tensor
-            representing marginal probability.
-        """
-        return torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)[0]
