@@ -121,7 +121,10 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         representing the maximum log probability. The second tensor is
         a [batch_size, sequence_length] integer tensor representing the tag sequence.
     """
-    max_score = amax(log_potentials)
+    with torch.enable_grad():
+        max_score = amax(log_potentials)
+        log_Z = forward_algorithm(log_potentials)
+
     (tag_matrix,) = torch.autograd.grad(
         max_score.sum(), log_potentials, allow_unused=True
     )
@@ -132,8 +135,6 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     )
 
     tag_indices = tag_bitmap.argmax(dim=-1)
-
-    log_Z = forward_algorithm(log_potentials)
 
     return max_score - log_Z, tag_indices
 
