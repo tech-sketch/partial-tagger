@@ -71,8 +71,7 @@ class CRF(nn.Module):
 
         with torch.enable_grad():
             log_potentials = self(logits, mask)
-
-        max_log_probability, tag_indices = crf.decode(log_potentials)
+            max_log_probability, tag_indices = crf.decode(log_potentials)
 
         tag_indices = tag_indices * mask + padding_index * (~mask)
 
