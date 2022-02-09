@@ -83,8 +83,59 @@ def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
     assert torch.allclose(max_score, expected_max_score)
 
 
+def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
+    _, log_potentials = test_data_small
+
+    max_log_probability, tag_indices = crf.decode(log_potentials)
+
+    max_score, expected_tag_indices = helpers.compute_best_tag_indices_by_brute_force(
+        log_potentials
+    )
+    log_Z = helpers.compute_log_normalizer_by_brute_force(log_potentials)
+    expected_max_log_probability = max_score - log_Z
+
+    assert torch.allclose(max_log_probability, expected_max_log_probability)
+    assert torch.allclose(tag_indices, expected_tag_indices)
+
+
 @pytest.mark.parametrize(
-    "tag_indices, num_tags, expected",
+    "mask, start_constraints, end_constraints, transition_constraints",
+    [
+        (
+            torch.ones((3, 20), dtype=torch.bool),
+            torch.tensor([True, False, False, True, True]),  # 0, 3, 4 are allowed
+            torch.tensor([False, True, True, False, False]),  # 2, 3 are allowed
+            torch.tensor(
+                [
+                    [True, False, True, True, True],  # 0->1 is not allowed
+                    [True, True, True, True, True],  # no constraints
+                    [True, True, False, True, True],  # 2->2 is not allowed
+                    [True, False, True, True, True],  # 3->1 is not allowed
+                    [True, False, False, False, False],  # only 4->0 is allowed
+                ]
+            ),
+        )
+    ],
+)
+def test_constrained_decode_returns_tag_indices_under_constraints(
+    mask: torch.Tensor,
+    start_constraints: torch.Tensor,
+    end_constraints: torch.Tensor,
+    transition_constraints: torch.Tensor,
+) -> None:
+    log_potentials = torch.randn(3, 19, 5, 5, requires_grad=True)
+
+    _, tag_indices = crf.constrained_decode(
+        log_potentials, mask, start_constraints, end_constraints, transition_constraints
+    )
+
+    assert helpers.check_tag_indices_satisfies_constraints(
+        tag_indices, start_constraints, end_constraints, transition_constraints
+    )
+
+
+@pytest.mark.parametrize(
+    "tag_indices, num_tags, expected, partial_index",
     [
         (
             torch.tensor([[0, 1, 2, 3, 4]]),
@@ -100,15 +151,32 @@ def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
                     ]
                 ]
             ),
+            None,
         ),
+        (torch.tensor([-100, -1, 5, 100]), 5, torch.tensor([[[False] * 5] * 4]), None),
         (
-            torch.tensor([-100, -1, 5, 100]),
+            torch.tensor([[0, 1, 2, 3, 4, -1, -1]]),
             5,
-            torch.tensor([[[False] * 5] * 4]),
+            torch.tensor(
+                [
+                    [
+                        [True, False, False, False, False],
+                        [False, True, False, False, False],
+                        [False, False, True, False, False],
+                        [False, False, False, True, False],
+                        [False, False, False, False, True],
+                        [True, True, True, True, True],
+                        [True, True, True, True, True],
+                    ]
+                ]
+            ),
+            -1,
         ),
     ],
 )
 def test_tag_bitmap_returns_expected_value(
-    tag_indices: torch.Tensor, num_tags: int, expected: torch.Tensor
+    tag_indices: torch.Tensor, num_tags: int, expected: torch.Tensor, partial_index: int
 ) -> None:
-    assert torch.equal(crf.to_tag_bitmap(tag_indices, num_tags), expected)
+    assert torch.equal(
+        crf.to_tag_bitmap(tag_indices, num_tags, partial_index), expected
+    )

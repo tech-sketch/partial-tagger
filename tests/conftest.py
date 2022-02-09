@@ -19,7 +19,9 @@ def test_data_small() -> tuple:
     batch_size = 2
     sequence_length = 3
     num_tags = 5
-    log_potentials = torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
+    log_potentials = torch.randn(
+        batch_size, sequence_length - 1, num_tags, num_tags, requires_grad=True
+    )
     return (batch_size, sequence_length, num_tags), log_potentials
 
 

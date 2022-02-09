@@ -34,7 +34,7 @@ class CRFTagger(nn.Module):
                 "Please fix feature_size or set use_kernel True."
             )
 
-        super().__init__()
+        super(CRFTagger, self).__init__()
 
         self.feature_extractor = feature_extractor
         self.crf_layer = CRF(num_tags)
@@ -62,9 +62,9 @@ class CRFTagger(nn.Module):
             and A [batch_size,  sequence_length] integer tensor representing
             the tag sequence.
         """
-        features = self.feature_extractor(inputs, mask)
-
-        logits = self.kernel(features)
+        with torch.no_grad():
+            features = self.feature_extractor(inputs, mask)
+            logits = self.kernel(features)
 
         return self.crf_layer.max(logits, mask)
 
@@ -91,7 +91,7 @@ class CRFTagger(nn.Module):
 
         log_potentials = self.crf_layer(logits, mask)
 
-        return crf.log_likelihood(log_potentials, y, mask).neg()
+        return crf.log_likelihood(log_potentials, y, mask).sum().neg()
 
 
 class PartialCRFTagger(CRFTagger):
@@ -127,4 +127,81 @@ class PartialCRFTagger(CRFTagger):
 
         log_potentials = self.crf_layer(logits, mask)
 
-        return crf.marginal_log_likelihood(log_potentials, y, mask).neg()
+        return crf.marginal_log_likelihood(log_potentials, y, mask).sum().neg()
+
+
+class EERPartialCRFTagger(CRFTagger):
+    """A sequence tagger for partially annotated data with expected entity ratio loss.
+
+    Args:
+        feature_size: Dimension of output vectors of feature_extractor.
+        feature_extractor: Feature extraction network.
+        num_tags: Number of tags.
+        use_kernel: Boolean indicating if a kernel is used.
+        outside_index: An integer value representing the O tag.
+        eer_loss_weight: A float value representing EER loss coefficient.
+        entity_ratio: A float value representing entity ratio.
+        entity_ratio_margin: A float value representing EER loss margin.
+    """
+
+    def __init__(
+        self,
+        feature_size: int,
+        feature_extractor: nn.Module,
+        num_tags: int,
+        use_kernel: bool = True,
+        outside_index: int = 0,
+        eer_loss_weight: float = 10.0,
+        entity_ratio: float = 0.15,
+        entity_ratio_margin: float = 0.05,
+    ) -> None:
+        super(EERPartialCRFTagger, self).__init__(
+            feature_size, feature_extractor, num_tags, use_kernel
+        )
+
+        self.outside_index = outside_index
+        self.eer_loss_weight = eer_loss_weight
+        self.entity_ratio = entity_ratio
+        self.entity_ratio_margin = entity_ratio_margin
+
+    def compute_loss(
+        self,
+        inputs: TaggerInputs,
+        y: torch.Tensor,
+        mask: Optional[torch.Tensor] = None,
+    ) -> torch.Tensor:
+        """Computes loss of a tagger.
+
+        Args:
+            inputs: Input tensor, or dict/list/tuple of input tensors.
+            y: A [batch_size, sequence_length, num_tags] boolean tensor
+            indicating all active tags at each index.
+            mask: A [batch_size, sequence_length] boolean tensor.
+
+        Returns:
+            A [batch_size] float tensor representing loss.
+        """
+        features = self.feature_extractor(inputs, mask)
+
+        logits = self.kernel(features)
+
+        log_potentials = self.crf_layer(logits, mask)
+
+        # marginal likelihood
+        score = crf.multitag_sequence_score(log_potentials, y, mask)
+        log_Z = crf.forward_algorithm(log_potentials)
+
+        # expected entity ratio
+        (p,) = torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)
+        expected_entity_count = (
+            p[:, :, : self.outside_index].sum()
+            + p[:, :, self.outside_index + 1 :].sum()
+        )
+        expected_entity_ratio = expected_entity_count / p.sum()
+        eer_loss = torch.clamp(
+            (expected_entity_ratio - self.entity_ratio).abs()
+            - self.entity_ratio_margin,
+            min=0,
+        )
+
+        return (log_Z - score).sum() + self.eer_loss_weight * eer_loss

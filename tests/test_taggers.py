@@ -2,7 +2,12 @@ import pytest
 import torch
 from torch import nn
 
-from partial_tagger.taggers import CRFTagger, PartialCRFTagger, TaggerInputs
+from partial_tagger.taggers import (
+    CRFTagger,
+    EERPartialCRFTagger,
+    PartialCRFTagger,
+    TaggerInputs,
+)
 
 
 class DummyFeatureExtractor(nn.Module):
@@ -44,22 +49,34 @@ def test_crf_tagger_forward_returns_correct_shape(
 def test_crf_tagger_compute_loss_returns_correct_shape(
     test_data_for_shape_check: tuple,
 ) -> None:
-    (batch_size, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
+    (_, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
 
     tagger = CRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
 
     loss = tagger.compute_loss(logits, tag_bitmap)
 
-    assert loss.size() == torch.Size([batch_size])
+    assert loss.size() == torch.Size()
 
 
 def test_partial_crf_tagger_compute_loss_returns_correct_shape(
     test_data_for_shape_check: tuple,
 ) -> None:
-    (batch_size, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
+    (_, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
 
     tagger = PartialCRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
 
     loss = tagger.compute_loss(logits, tag_bitmap)
 
-    assert loss.size() == torch.Size([batch_size])
+    assert loss.size() == torch.Size()
+
+
+def test_eer_partial_crf_tagger_compute_loss_returns_correct_shape(
+    test_data_for_shape_check: tuple,
+) -> None:
+    (_, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
+
+    tagger = EERPartialCRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
+
+    loss = tagger.compute_loss(logits, tag_bitmap)
+
+    assert loss.size() == torch.Size()

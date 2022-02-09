@@ -55,3 +55,21 @@ def compute_best_tag_indices_by_brute_force(
                 max_score = tag_indices_score
         max_scores[b] = max_score
     return max_scores, best_tag_indices
+
+
+def check_tag_indices_satisfies_constraints(
+    tag_indices: torch.Tensor,
+    start_constraints: torch.Tensor,
+    end_constraints: torch.Tensor,
+    transition_constraints: torch.Tensor,
+) -> bool:
+    sequence_length = tag_indices.size(-1)
+    for tags in tag_indices:
+        if not start_constraints[tags[0]]:
+            return False
+        if not end_constraints[tags[-1]]:
+            return False
+        for i in range(sequence_length - 1):
+            if not transition_constraints[tags[i], tags[i + 1]]:
+                return False
+    return True
