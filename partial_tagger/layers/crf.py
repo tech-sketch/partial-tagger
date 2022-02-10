@@ -40,12 +40,12 @@ class CRF(nn.Module):
         log_potentials[:, 0] += logits[:, 0, :, None]
 
         num_tags = log_potentials.size(-1)
-        value = crf.NINF * (
+        mask_value = crf.NINF * (
             1 - torch.eye(num_tags, num_tags, device=log_potentials.device)
         )
         mask = mask[:, 1:, None, None]
 
-        return log_potentials * mask + value * (~mask)
+        return log_potentials * mask + mask_value * (~mask)
 
     def max(
         self,

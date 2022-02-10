@@ -99,9 +99,10 @@ def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> Non
 
 
 @pytest.mark.parametrize(
-    "mask, start_constraints, end_constraints, transition_constraints",
+    "log_potentials, mask, start_constraints, end_constraints, transition_constraints",
     [
         (
+            torch.randn(3, 19, 5, 5, requires_grad=True),
             torch.ones((3, 20), dtype=torch.bool),
             torch.tensor([True, False, False, True, True]),  # 0, 3, 4 are allowed
             torch.tensor([False, True, True, False, False]),  # 2, 3 are allowed
@@ -114,17 +115,23 @@ def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> Non
                     [True, False, False, False, False],  # only 4->0 is allowed
                 ]
             ),
-        )
+        ),
+        (
+            torch.zeros(3, 19, 5, 5, requires_grad=True),
+            torch.ones((3, 20), dtype=torch.bool),
+            torch.tensor([False, False, True, True, True]),
+            torch.tensor([False, False, True, True, True]),
+            torch.tensor([[True] * 5] * 5),
+        ),
     ],
 )
 def test_constrained_decode_returns_tag_indices_under_constraints(
+    log_potentials: torch.Tensor,
     mask: torch.Tensor,
     start_constraints: torch.Tensor,
     end_constraints: torch.Tensor,
     transition_constraints: torch.Tensor,
 ) -> None:
-    log_potentials = torch.randn(3, 19, 5, 5, requires_grad=True)
-
     _, tag_indices = crf.constrained_decode(
         log_potentials, mask, start_constraints, end_constraints, transition_constraints
     )
