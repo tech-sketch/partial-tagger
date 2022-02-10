@@ -85,7 +85,7 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
             dim=-2,
         )
 
-    return normalizer(log_potentials, dim=(-1, -2)).squeeze(dim=-1)
+    return normalizer(normalizer(log_potentials, dim=-2), dim=-1).squeeze(dim=-1)
 
 
 def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
@@ -111,7 +111,11 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
     Returns:
         A [batch_size] float tensor representing the maximum score.
     """
-    return normalize(log_potentials, torch.amax)
+
+    def _amax(inputs: torch.Tensor, dim: int) -> torch.Tensor:
+        return torch.max(inputs, dim=dim).values
+
+    return normalize(log_potentials, _amax)
 
 
 def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -129,9 +133,7 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     max_score = amax(log_potentials)
     log_Z = forward_algorithm(log_potentials)
 
-    (tag_matrix,) = torch.autograd.grad(
-        max_score.sum(), log_potentials, allow_unused=True
-    )
+    (tag_matrix,) = torch.autograd.grad(max_score.sum(), log_potentials)
     tag_matrix = tag_matrix.long()
 
     tag_bitmap = torch.cat(
