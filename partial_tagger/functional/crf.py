@@ -67,10 +67,15 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
 
     n = sequence_length.bit_length()
     padding_length = (1 << n) - sequence_length
-    value = (1 - torch.eye(num_tags, num_tags, device=log_potentials.device)) * NINF
+    padding_value = (
+        1 - torch.eye(num_tags, num_tags, device=log_potentials.device)
+    ) * NINF
 
     log_potentials = torch.cat(
-        (log_potentials, value[None, None].repeat(batch_size, padding_length, 1, 1)),
+        (
+            log_potentials,
+            padding_value[None, None].repeat(batch_size, padding_length, 1, 1),
+        ),
         dim=1,
     )
 
