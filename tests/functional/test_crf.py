@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 import torch
 
@@ -96,6 +98,19 @@ def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> Non
 
     assert torch.allclose(max_log_probability, expected_max_log_probability)
     assert torch.allclose(tag_indices, expected_tag_indices)
+
+
+def test_sequence_score_computes_mask_correctly(
+    test_data_with_mask: tuple,
+) -> None:
+    (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
+    tag_bitmap = crf.to_tag_bitmap(tag_indices, num_tags)
+
+    with patch("torch.Tensor.mul") as m:
+        crf.sequence_score(log_potentials, tag_bitmap, mask)
+        used_mask = m.call_args[0][0]
+
+        assert helpers.check_sequence_score_mask(used_mask, tag_indices, mask)
 
 
 @pytest.mark.parametrize(

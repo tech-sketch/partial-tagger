@@ -85,3 +85,28 @@ def check_log_potentials_mask(log_potentials: torch.Tensor, mask: torch.Tensor) 
             if not torch.allclose(log_potentials[b, L], mask_value):
                 return False
     return True
+
+
+def check_sequence_score_mask(
+    used_mask: torch.Tensor, tag_indices: torch.Tensor, mask: torch.Tensor
+) -> bool:
+    num_tags = used_mask.size(-1)
+    lengths = mask.sum(dim=-1)
+    for b, real_sequence_length in enumerate(lengths):
+        # only (i, j) is True, otherwise False
+        tags = tag_indices[b, :real_sequence_length]
+        for pos, (i, j) in enumerate(zip(tags[:-1], tags[1:])):
+            if not used_mask[b, pos, i, j]:
+                return False
+            for x in range(num_tags):
+                for y in range(num_tags):
+                    if x == i and y == j:
+                        continue
+                    if used_mask[b, pos, x, y]:
+                        return False
+
+        # all values should be False.
+        ignores = used_mask[b, real_sequence_length - 1 :]
+        if not torch.equal(ignores, torch.zeros_like(ignores, dtype=torch.bool)):
+            return False
+    return True
