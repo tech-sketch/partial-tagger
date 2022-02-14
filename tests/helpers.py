@@ -73,3 +73,15 @@ def check_tag_indices_satisfies_constraints(
             if not transition_constraints[tags[i], tags[i + 1]]:
                 return False
     return True
+
+
+def check_log_potentials_mask(log_potentials: torch.Tensor, mask: torch.Tensor) -> bool:
+    sequence_length = log_potentials.size(1)
+    num_tags = log_potentials.size(-1)
+    mask_value = (~torch.eye(num_tags, num_tags).bool()).mul(NINF)
+    lengths = mask.sum(dim=-1)
+    for b, real_sequence_length in enumerate(lengths):
+        for L in range(real_sequence_length, sequence_length):
+            if not torch.allclose(log_potentials[b, L], mask_value):
+                return False
+    return True
