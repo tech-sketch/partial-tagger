@@ -52,6 +52,20 @@ def test_crf_forward_returns_log_potentials_yield_likelihood_valid_as_probabilit
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
 
 
+def test_crf_forward_returns_correctly_masked_log_potentials(model: CRF) -> None:
+    batch_size = 3
+    sequence_length = 20
+    num_tags = 5
+    logits = torch.randn(batch_size, sequence_length, num_tags)
+    mask = torch.tensor(
+        [[True] * (sequence_length - 2 * i) + [False] * 2 * i for i in range(3)]
+    )
+
+    log_potentials = model(logits, mask)
+
+    assert helpers.check_log_potentials_mask(log_potentials, mask)
+
+
 def test_crf_max_returns_correct_tag_indices(
     model: CRF, test_data_by_hand: tuple
 ) -> None:

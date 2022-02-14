@@ -60,3 +60,16 @@ def test_data_by_hand() -> tuple:
     )
     tag_indices = torch.tensor([[1, 2, 3], [3, 4, 4]])
     return (batch_size, sequence_length, num_tags), logits, tag_indices
+
+
+@pytest.fixture
+def test_data_with_mask() -> tuple:
+    batch_size = 3
+    sequence_length = 20
+    num_tags = 5
+    log_potentials = torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
+    mask = torch.tensor(
+        [[True] * (sequence_length - 2 * i) + [False] * 2 * i for i in range(3)]
+    )
+    tag_indices = torch.randint(0, num_tags, (batch_size, sequence_length))
+    return (batch_size, sequence_length, num_tags), log_potentials, tag_indices, mask

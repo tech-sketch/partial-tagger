@@ -1,3 +1,5 @@
+from unittest.mock import patch
+
 import pytest
 import torch
 
@@ -98,6 +100,38 @@ def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> Non
     assert torch.allclose(tag_indices, expected_tag_indices)
 
 
+def test_sequence_score_computes_mask_correctly(
+    test_data_with_mask: tuple,
+) -> None:
+    (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
+    tag_bitmap = crf.to_tag_bitmap(tag_indices, num_tags)
+
+    with patch("torch.Tensor.mul") as m:
+        crf.sequence_score(log_potentials, tag_bitmap, mask)
+        used_mask = m.call_args[0][0]
+
+        assert helpers.check_sequence_score_mask(used_mask, tag_indices, mask)
+
+
+@pytest.mark.parametrize(
+    "partial_index",
+    [i for i in range(5)],
+)
+def test_multitag_sequence_score_correctly_masks_log_potentials(
+    test_data_with_mask: tuple, partial_index: int
+) -> None:
+    (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
+    tag_bitmap = crf.to_tag_bitmap(tag_indices, num_tags, partial_index=partial_index)
+
+    with patch("partial_tagger.functional.crf.forward_algorithm") as m:
+        crf.multitag_sequence_score(log_potentials, tag_bitmap, mask)
+        constrained_log_potentials = m.call_args[0][0]
+
+        assert helpers.check_constrained_log_potentials(
+            log_potentials, constrained_log_potentials, tag_indices, mask, partial_index
+        )
+
+
 @pytest.mark.parametrize(
     "log_potentials, mask, start_constraints, end_constraints, transition_constraints",
     [
@@ -178,6 +212,24 @@ def test_constrained_decode_returns_tag_indices_under_constraints(
                 ]
             ),
             -1,
+        ),
+        (
+            torch.tensor([[4, 1, 2, 3, 4, 0, 0]]),
+            5,
+            torch.tensor(
+                [
+                    [
+                        [False, False, False, False, True],
+                        [False, True, False, False, False],
+                        [False, False, True, False, False],
+                        [False, False, False, True, False],
+                        [False, False, False, False, True],
+                        [True, True, True, True, True],
+                        [True, True, True, True, True],
+                    ]
+                ]
+            ),
+            0,
         ),
     ],
 )
