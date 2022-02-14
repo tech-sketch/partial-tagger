@@ -192,7 +192,11 @@ class EERPartialCRFTagger(CRFTagger):
         log_Z = crf.forward_algorithm(log_potentials)
 
         # expected entity ratio
-        (p,) = torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)
+        p = torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)[0].sum(
+            dim=-1
+        )
+        if mask is not None:
+            p *= mask[:, 1:, None]
         expected_entity_count = (
             p[:, :, : self.outside_index].sum()
             + p[:, :, self.outside_index + 1 :].sum()
@@ -204,4 +208,4 @@ class EERPartialCRFTagger(CRFTagger):
             min=0,
         )
 
-        return (log_Z - score).sum() + self.eer_loss_weight * eer_loss
+        return (log_Z - score).mean() + self.eer_loss_weight * eer_loss
