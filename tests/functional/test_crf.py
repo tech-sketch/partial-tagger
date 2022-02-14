@@ -179,6 +179,24 @@ def test_constrained_decode_returns_tag_indices_under_constraints(
             ),
             -1,
         ),
+        (
+            torch.tensor([[4, 1, 2, 3, 4, 0, 0]]),
+            5,
+            torch.tensor(
+                [
+                    [
+                        [False, False, False, False, True],
+                        [False, True, False, False, False],
+                        [False, False, True, False, False],
+                        [False, False, False, True, False],
+                        [False, False, False, False, True],
+                        [True, True, True, True, True],
+                        [True, True, True, True, True],
+                    ]
+                ]
+            ),
+            0,
+        ),
     ],
 )
 def test_tag_bitmap_returns_expected_value(
