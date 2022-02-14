@@ -69,12 +69,12 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
     padding_length = (1 << n) - sequence_length
     padding_value = (
         1 - torch.eye(num_tags, num_tags, device=log_potentials.device)
-    ) * NINF
+    ).mul(NINF)[None, None]
 
     log_potentials = torch.cat(
         (
             log_potentials,
-            padding_value[None, None].repeat(batch_size, padding_length, 1, 1),
+            padding_value.repeat(batch_size, padding_length, 1, 1),
         ),
         dim=1,
     )
@@ -248,7 +248,7 @@ def multitag_sequence_score(
     if mask is None:
         mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
 
-    tag_bitmap = tag_bitmap | (~mask[..., None])
+    tag_bitmap = tag_bitmap | (~mask)[..., None]
     tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
 
     constrained_log_potentials = log_potentials * tag_matrix + NINF * (~tag_matrix)
