@@ -114,6 +114,25 @@ def test_sequence_score_computes_mask_correctly(
 
 
 @pytest.mark.parametrize(
+    "partial_index",
+    [i for i in range(5)],
+)
+def test_multitag_sequence_score_correctly_masks_log_potentials(
+    test_data_with_mask: tuple, partial_index: int
+) -> None:
+    (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
+    tag_bitmap = crf.to_tag_bitmap(tag_indices, num_tags, partial_index=partial_index)
+
+    with patch("partial_tagger.functional.crf.forward_algorithm") as m:
+        crf.multitag_sequence_score(log_potentials, tag_bitmap, mask)
+        constrained_log_potentials = m.call_args[0][0]
+
+        assert helpers.check_constrained_log_potentials(
+            log_potentials, constrained_log_potentials, tag_indices, mask, partial_index
+        )
+
+
+@pytest.mark.parametrize(
     "log_potentials, mask, start_constraints, end_constraints, transition_constraints",
     [
         (

@@ -106,7 +106,60 @@ def check_sequence_score_mask(
                         return False
 
         # all values should be False.
-        ignores = used_mask[b, real_sequence_length - 1 :]
+        ignores = used_mask[b, real_sequence_length:]
         if not torch.equal(ignores, torch.zeros_like(ignores, dtype=torch.bool)):
+            return False
+    return True
+
+
+def check_constrained_log_potentials(
+    log_potentials: torch.Tensor,
+    constrained_log_potentials: torch.Tensor,
+    tag_indices: torch.Tensor,
+    mask: torch.Tensor,
+    partial_index: int,
+) -> bool:
+    num_tags = log_potentials.size(-1)
+    lengths = mask.sum(dim=-1)
+    for b, real_sequence_length in enumerate(lengths):
+        tags = tag_indices[b, :real_sequence_length]
+        for pos, (i, j) in enumerate(zip(tags[:-1], tags[1:])):
+            if i == partial_index and j == partial_index:
+                x = constrained_log_potentials[b, pos]
+                y = log_potentials[b, pos]
+            elif i == partial_index:
+                for n in range(num_tags):
+                    if n == j:
+                        continue
+                    temp = constrained_log_potentials[b, pos, :, n]
+                    if not torch.equal(temp, torch.full_like(temp, NINF)):
+                        return False
+                x = constrained_log_potentials[b, pos, :, j]
+                y = log_potentials[b, pos, :, j]
+            elif j == partial_index:
+                for m in range(num_tags):
+                    if m == i:
+                        continue
+                    temp = constrained_log_potentials[b, pos, m]
+                    if not torch.equal(temp, torch.full_like(temp, NINF)):
+                        return False
+                x = constrained_log_potentials[b, pos, i]
+                y = log_potentials[b, pos, i]
+            else:
+                for m in range(num_tags):
+                    for n in range(num_tags):
+                        if m == i and n == j:
+                            continue
+                        if constrained_log_potentials[b, pos, m, n] != NINF:
+                            return False
+                x = constrained_log_potentials[b, pos, i, j]
+                y = log_potentials[b, pos, i, j]
+
+            if not torch.equal(x, y):
+                return False
+
+        x = constrained_log_potentials[b, real_sequence_length:]
+        y = log_potentials[b, real_sequence_length:]
+        if not torch.equal(x, y):
             return False
     return True
