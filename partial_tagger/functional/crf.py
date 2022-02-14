@@ -277,4 +277,4 @@ def to_tag_bitmap(
         return tag_bitmap
 
     partial_mask = tag_indices.eq(partial_index)
-    return tag_bitmap ^ partial_mask[..., None]
+    return tag_bitmap | partial_mask[..., None]
