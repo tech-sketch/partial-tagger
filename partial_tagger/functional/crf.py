@@ -136,9 +136,7 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     (tag_matrix,) = torch.autograd.grad(max_score.sum(), log_potentials)
     tag_matrix = tag_matrix.long()
 
-    tag_bitmap = torch.cat(
-        (tag_matrix.sum(dim=-1), tag_matrix[:, [-1]].sum(dim=-2)), dim=1
-    )
+    tag_bitmap = tag_matrix.sum(dim=-2)
 
     tag_indices = tag_bitmap.argmax(dim=-1)
 
