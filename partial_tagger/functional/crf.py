@@ -258,7 +258,7 @@ def multitag_sequence_score(
 
     num_tags = log_potentials.size(-1)
 
-    tag_bitmap = tag_bitmap | (~mask)[..., None]
+    tag_bitmap = tag_bitmap & mask[..., None]
 
     initial_tag_matrix = (
         tag_bitmap[:, [0], :, None]
@@ -268,6 +268,7 @@ def multitag_sequence_score(
         (initial_tag_matrix, tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]),
         dim=1,
     )
+    tag_matrix |= (~mask)[..., None, None]
 
     constrained_log_potentials = log_potentials * tag_matrix + NINF * (~tag_matrix)
     return forward_algorithm(constrained_log_potentials)
