@@ -72,7 +72,12 @@ def test_data_with_mask() -> tuple:
     batch_size = 3
     sequence_length = 20
     num_tags = 5
-    log_potentials = torch.randn(batch_size, sequence_length - 1, num_tags, num_tags)
+    log_potentials = torch.randn(batch_size, sequence_length, num_tags, num_tags)
+    # a dummy initial token
+    initial_mask = torch.eye(num_tags, num_tags).bool()
+    log_potentials[:, 0] = log_potentials[:, 0] * initial_mask + crf.NINF * (
+        ~initial_mask
+    )
     mask = torch.tensor(
         [[True] * (sequence_length - 2 * i) + [False] * 2 * i for i in range(3)]
     )
