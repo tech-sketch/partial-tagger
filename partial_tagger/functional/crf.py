@@ -171,23 +171,27 @@ def constrained_decode(
     # Apply end constraints
     end_constraints = (
         torch.arange(log_potentials.size(1), device=log_potentials.device)[None].lt(
-            mask.sum(dim=-1).sub(2)[..., None]
+            mask.sum(dim=-1).sub(1)[..., None]
         )
-        ^ (~mask[:, 1:])
+        ^ (~mask)
     )[..., None, None] | end_constraints[None, None, None]
     constrained_log_potentials = log_potentials * end_constraints + NINF * (
         ~end_constraints
     )
 
     # Apply start constraints
-    start_constraints = start_constraints[None, :, None]
+    num_tags = log_potentials.size(-1)
+    start_constraints = (
+        start_constraints
+        & torch.eye(num_tags, num_tags, device=log_potentials.device).bool()
+    )[None]
     constrained_log_potentials[:, 0] = constrained_log_potentials[
         :, 0
     ] * start_constraints + NINF * (~start_constraints)
 
     # Apply transition constraints
     transition_constraints = transition_constraints[None, None] | (
-        ~mask[:, 1:, None, None]
+        ~mask[..., None, None]
     )
     constrained_log_potentials = (
         constrained_log_potentials * transition_constraints
