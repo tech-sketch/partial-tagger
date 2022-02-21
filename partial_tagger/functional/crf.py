@@ -244,7 +244,7 @@ def multitag_sequence_score(
     """Computes the sequence score of all tag sequences matching.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating all active tags at each index.
@@ -256,8 +256,18 @@ def multitag_sequence_score(
     if mask is None:
         mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
 
+    num_tags = log_potentials.size(-1)
+
     tag_bitmap = tag_bitmap | (~mask)[..., None]
-    tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
+
+    initial_tag_matrix = (
+        tag_bitmap[:, [0], :, None]
+        & torch.eye(num_tags, num_tags, device=log_potentials.device).bool()
+    )
+    tag_matrix = torch.cat(
+        (initial_tag_matrix, tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]),
+        dim=1,
+    )
 
     constrained_log_potentials = log_potentials * tag_matrix + NINF * (~tag_matrix)
     return forward_algorithm(constrained_log_potentials)
