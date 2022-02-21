@@ -66,6 +66,21 @@ def test_crf_forward_returns_correctly_masked_log_potentials(model: CRF) -> None
     assert helpers.check_log_potentials_mask(log_potentials, mask)
 
 
+def test_crf_forward_returns_tensor_if_sequence_length_equals_to_one(
+    model: CRF,
+) -> None:
+    batch_size = 3
+    sequence_length = 1
+    num_tags = 5
+    logits = torch.randn(batch_size, sequence_length, num_tags)
+
+    log_potentials = model(logits)
+
+    assert log_potentials.size() == torch.Size(
+        [batch_size, sequence_length, num_tags, num_tags]
+    )
+
+
 def test_crf_max_returns_correct_tag_indices(
     model: CRF, test_data_by_hand: tuple
 ) -> None:
