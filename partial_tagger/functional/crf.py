@@ -13,7 +13,7 @@ def log_likelihood(
     """Computes log likelihood.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating an active tag at each index.
@@ -37,7 +37,7 @@ def marginal_log_likelihood(
     """Computes marginal log likelihood.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating all active tags at each index.
@@ -57,7 +57,7 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
     """Normalizes log potentials based on normalizer.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -92,7 +92,7 @@ def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
     """Computes the normalizer for a CRF.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -105,7 +105,7 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
     """Computes the maximum score for a CRF.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -122,7 +122,7 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Computes the tag sequence gives the maximum probability for log potentials.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -155,7 +155,7 @@ def constrained_decode(
     with start/end/transition constraints.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         mask: A [batch_size, sequence_length] boolean tensor.
         start_constraints: A [num_tags] boolean tensor.
