@@ -96,7 +96,16 @@ def check_sequence_score_mask(
     for b, real_sequence_length in enumerate(lengths):
         # only (i, j) is True, otherwise False
         tags = tag_indices[b, :real_sequence_length]
-        for pos, (i, j) in enumerate(zip(tags[:-1], tags[1:])):
+        if not used_mask[b, 0, tags[0], tags[0]]:
+            return False
+        for x in range(num_tags):
+            for y in range(num_tags):
+                if x == tags[0] and y == tags[0]:
+                    continue
+                if used_mask[b, 0, x, y]:
+                    return False
+
+        for pos, (i, j) in enumerate(zip(tags[:-1], tags[1:]), 1):
             if not used_mask[b, pos, i, j]:
                 return False
             for x in range(num_tags):
