@@ -132,7 +132,8 @@ def check_constrained_log_potentials(
     num_tags = log_potentials.size(-1)
     lengths = mask.sum(dim=-1)
     for b, real_sequence_length in enumerate(lengths):
-        tags = tag_indices[b, :real_sequence_length]
+        tags = tag_indices[b, :real_sequence_length].tolist()
+        tags = [tags[0]] + tags
         for pos, (i, j) in enumerate(zip(tags[:-1], tags[1:])):
             if i == partial_index and j == partial_index:
                 x = constrained_log_potentials[b, pos]
