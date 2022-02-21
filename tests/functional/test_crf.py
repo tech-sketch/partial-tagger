@@ -136,7 +136,7 @@ def test_multitag_sequence_score_correctly_masks_log_potentials(
     "log_potentials, mask, start_constraints, end_constraints, transition_constraints",
     [
         (
-            torch.randn(3, 19, 5, 5, requires_grad=True),
+            torch.randn(3, 20, 5, 5, requires_grad=True),
             torch.ones((3, 20), dtype=torch.bool),
             torch.tensor([True, False, False, True, True]),  # 0, 3, 4 are allowed
             torch.tensor([False, True, True, False, False]),  # 2, 3 are allowed
@@ -151,7 +151,7 @@ def test_multitag_sequence_score_correctly_masks_log_potentials(
             ),
         ),
         (
-            torch.zeros(3, 19, 5, 5, requires_grad=True),
+            torch.zeros(3, 20, 5, 5, requires_grad=True),
             torch.ones((3, 20), dtype=torch.bool),
             torch.tensor([False, False, True, True, True]),
             torch.tensor([False, False, True, True, True]),
