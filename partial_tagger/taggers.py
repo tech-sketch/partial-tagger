@@ -196,7 +196,7 @@ class EERPartialCRFTagger(CRFTagger):
             dim=-1
         )
         if mask is not None:
-            p *= mask[:, 1:, None]
+            p *= mask[..., None]
         expected_entity_count = (
             p[:, :, : self.outside_index].sum()
             + p[:, :, self.outside_index + 1 :].sum()
