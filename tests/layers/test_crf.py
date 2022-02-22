@@ -19,7 +19,7 @@ def test_crf_forward_returns_correct_shape(test_data_for_shape_check: tuple) -> 
     model = CRF(num_tags)
 
     assert model(logits).size() == torch.Size(
-        [batch_size, sequence_length - 1, num_tags, num_tags]
+        [batch_size, sequence_length, num_tags, num_tags]
     )
 
 
@@ -64,6 +64,21 @@ def test_crf_forward_returns_correctly_masked_log_potentials(model: CRF) -> None
     log_potentials = model(logits, mask)
 
     assert helpers.check_log_potentials_mask(log_potentials, mask)
+
+
+def test_crf_forward_returns_tensor_if_sequence_length_equals_to_one(
+    model: CRF,
+) -> None:
+    batch_size = 3
+    sequence_length = 1
+    num_tags = 5
+    logits = torch.randn(batch_size, sequence_length, num_tags)
+
+    log_potentials = model(logits)
+
+    assert log_potentials.size() == torch.Size(
+        [batch_size, sequence_length, num_tags, num_tags]
+    )
 
 
 def test_crf_max_returns_correct_tag_indices(

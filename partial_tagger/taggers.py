@@ -83,7 +83,7 @@ class CRFTagger(nn.Module):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A [batch_size] float tensor representing loss.
+            A float tensor representing loss.
         """
         features = self.feature_extractor(inputs, mask)
 
@@ -119,7 +119,7 @@ class PartialCRFTagger(CRFTagger):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A [batch_size] float tensor representing loss.
+            A float tensor representing loss.
         """
         features = self.feature_extractor(inputs, mask)
 
@@ -179,7 +179,7 @@ class EERPartialCRFTagger(CRFTagger):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A [batch_size] float tensor representing loss.
+            A float tensor representing loss.
         """
         features = self.feature_extractor(inputs, mask)
 
@@ -196,7 +196,7 @@ class EERPartialCRFTagger(CRFTagger):
             dim=-1
         )
         if mask is not None:
-            p *= mask[:, 1:, None]
+            p *= mask[..., None]
         expected_entity_count = (
             p[:, :, : self.outside_index].sum()
             + p[:, :, self.outside_index + 1 :].sum()

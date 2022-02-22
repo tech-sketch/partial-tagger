@@ -30,20 +30,29 @@ class CRF(nn.Module):
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A [batch_size, sequence_length - 1, num_tag, num_tags] float tensor
+            A [batch_size, sequence_length, num_tag, num_tags] float tensor
             representing log potentials.
         """
         if mask is None:
             mask = self.compute_mask_from_logits(logits)
 
-        log_potentials = logits[:, 1:, None, :] + self.transitions[None, None]
-        log_potentials[:, 0] += logits[:, 0, :, None]
+        num_tags = logits.size(-1)
+        initial_mask = torch.eye(num_tags, num_tags, device=logits.device).bool()
 
-        num_tags = log_potentials.size(-1)
-        mask_value = crf.NINF * (
-            1 - torch.eye(num_tags, num_tags, device=log_potentials.device)
+        # log potential from the dummy initial token to the first token
+        initial_log_potentials = logits[:, [0], :, None] * initial_mask + crf.NINF * (
+            ~initial_mask
         )
-        mask = mask[:, 1:, None, None]
+        log_potentials = torch.cat(
+            (
+                initial_log_potentials,
+                logits[:, 1:, None, :] + self.transitions[None, None],
+            ),
+            dim=1,
+        )
+
+        mask_value = crf.NINF * (~initial_mask)
+        mask = mask[..., None, None]
 
         return log_potentials * mask + mask_value * (~mask)
 

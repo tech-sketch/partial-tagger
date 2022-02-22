@@ -13,7 +13,7 @@ def log_likelihood(
     """Computes log likelihood.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating an active tag at each index.
@@ -37,7 +37,7 @@ def marginal_log_likelihood(
     """Computes marginal log likelihood.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating all active tags at each index.
@@ -57,7 +57,7 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
     """Normalizes log potentials based on normalizer.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -92,7 +92,7 @@ def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
     """Computes the normalizer for a CRF.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -105,7 +105,7 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
     """Computes the maximum score for a CRF.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -122,7 +122,7 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     """Computes the tag sequence gives the maximum probability for log potentials.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
 
     Returns:
@@ -136,9 +136,7 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     (tag_matrix,) = torch.autograd.grad(max_score.sum(), log_potentials)
     tag_matrix = tag_matrix.long()
 
-    tag_bitmap = torch.cat(
-        (tag_matrix.sum(dim=-1), tag_matrix[:, [-1]].sum(dim=-2)), dim=1
-    )
+    tag_bitmap = tag_matrix.sum(dim=-2)
 
     tag_indices = tag_bitmap.argmax(dim=-1)
 
@@ -157,7 +155,7 @@ def constrained_decode(
     with start/end/transition constraints.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         mask: A [batch_size, sequence_length] boolean tensor.
         start_constraints: A [num_tags] boolean tensor.
@@ -173,23 +171,27 @@ def constrained_decode(
     # Apply end constraints
     end_constraints = (
         torch.arange(log_potentials.size(1), device=log_potentials.device)[None].lt(
-            mask.sum(dim=-1).sub(2)[..., None]
+            mask.sum(dim=-1).sub(1)[..., None]
         )
-        ^ (~mask[:, 1:])
+        ^ (~mask)
     )[..., None, None] | end_constraints[None, None, None]
     constrained_log_potentials = log_potentials * end_constraints + NINF * (
         ~end_constraints
     )
 
     # Apply start constraints
-    start_constraints = start_constraints[None, :, None]
+    num_tags = log_potentials.size(-1)
+    start_constraints = (
+        start_constraints
+        & torch.eye(num_tags, num_tags, device=log_potentials.device).bool()
+    )[None]
     constrained_log_potentials[:, 0] = constrained_log_potentials[
         :, 0
     ] * start_constraints + NINF * (~start_constraints)
 
     # Apply transition constraints
     transition_constraints = transition_constraints[None, None] | (
-        ~mask[:, 1:, None, None]
+        ~mask[..., None, None]
     )
     constrained_log_potentials = (
         constrained_log_potentials * transition_constraints
@@ -210,7 +212,7 @@ def sequence_score(
     """Computes the sequence score based on the given tag_bitmap.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating an active tag at each index.
@@ -222,8 +224,18 @@ def sequence_score(
     if mask is None:
         mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
 
+    num_tags = log_potentials.size(-1)
+
     tag_bitmap = tag_bitmap & mask[..., None]
-    tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
+
+    initial_tag_matrix = (
+        tag_bitmap[:, [0], :, None]
+        & torch.eye(num_tags, num_tags, device=log_potentials.device).bool()
+    )
+    tag_matrix = torch.cat(
+        (initial_tag_matrix, tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]),
+        dim=1,
+    )
 
     return log_potentials.mul(tag_matrix).sum(dim=(1, 2, 3))
 
@@ -236,7 +248,7 @@ def multitag_sequence_score(
     """Computes the sequence score of all tag sequences matching.
 
     Args:
-        log_potentials: A [batch_size, sequence_length - 1, num_tags, num_tags]
+        log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
         tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
         indicating all active tags at each index.
@@ -248,8 +260,19 @@ def multitag_sequence_score(
     if mask is None:
         mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
 
-    tag_bitmap = tag_bitmap | (~mask)[..., None]
-    tag_matrix = tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]
+    num_tags = log_potentials.size(-1)
+
+    tag_bitmap = tag_bitmap & mask[..., None]
+
+    initial_tag_matrix = (
+        tag_bitmap[:, [0], :, None]
+        & torch.eye(num_tags, num_tags, device=log_potentials.device).bool()
+    )
+    tag_matrix = torch.cat(
+        (initial_tag_matrix, tag_bitmap[:, :-1, :, None] & tag_bitmap[:, 1:, None, :]),
+        dim=1,
+    )
+    tag_matrix |= (~mask)[..., None, None]
 
     constrained_log_potentials = log_potentials * tag_matrix + NINF * (~tag_matrix)
     return forward_algorithm(constrained_log_potentials)
