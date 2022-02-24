@@ -70,13 +70,12 @@ class CRFTagger(nn.Module):
             and A [batch_size,  sequence_length] integer tensor representing
             the tag sequence.
         """
-        with torch.no_grad():
-            features = self.feature_extractor(inputs, mask)
-            logits = self.kernel(features)
+        features = self.feature_extractor(inputs, mask)
+        logits = self.kernel(features)
 
-        log_potentials = self.crf_layer(logits, mask)
-
-        return self.decoder(log_potentials, mask)
+        with torch.enable_grad():
+            log_potentials = self.crf_layer(logits, mask)
+            return self.decoder(log_potentials, mask)
 
     def compute_loss(
         self,
