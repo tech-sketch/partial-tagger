@@ -140,7 +140,7 @@ class PartialCRFTagger(CRFTagger):
         return crf.marginal_log_likelihood(log_potentials, y, mask).sum().neg()
 
 
-class EERPartialCRFTagger(CRFTagger):
+class ExpectedEntityRatioPartialCRFTagger(CRFTagger):
     """A sequence tagger for partially annotated data with expected entity ratio loss.
 
     Args:
@@ -167,7 +167,7 @@ class EERPartialCRFTagger(CRFTagger):
         entity_ratio: float = 0.15,
         entity_ratio_margin: float = 0.05,
     ) -> None:
-        super(EERPartialCRFTagger, self).__init__(
+        super(ExpectedEntityRatioPartialCRFTagger, self).__init__(
             feature_size,
             feature_extractor,
             num_tags,
