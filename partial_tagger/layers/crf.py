@@ -111,9 +111,9 @@ class ConstrainedDecoder(BaseDecoder):
 
     Args:
         padding_index: An integer for padded elements.
-        start_constraints: A list of boolean.
-        end_constraints: A list of boolean.
-        transition_constraints: A list of boolean.
+        start_constraints: A list of boolean indicating allowed start tags.
+        end_constraints: A list of boolean indicating allowed end tags. .
+        transition_constraints: A nested list of boolean indicating allowed transition.
     """
 
     def __init__(

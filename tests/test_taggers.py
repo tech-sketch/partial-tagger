@@ -38,9 +38,10 @@ def test_crf_tagger_forward_returns_correct_shape(
 ) -> None:
     (batch_size, sequence_length, num_tags), logits, _, _ = test_data_for_shape_check
 
-    tagger = CRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
+    tagger = CRFTagger(num_tags, DummyFeatureExtractor(), num_tags).eval()
 
-    max_probabilities, tag_indices = tagger(logits)
+    with torch.no_grad():
+        max_probabilities, tag_indices = tagger(logits)
 
     assert max_probabilities.size() == torch.Size([batch_size])
     assert tag_indices.size() == torch.Size([batch_size, sequence_length])
