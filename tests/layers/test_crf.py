@@ -3,6 +3,7 @@ import torch
 
 from partial_tagger.functional import crf
 from partial_tagger.layers import CRF
+from partial_tagger.layers.crf import ConstrainedDecoder, Decoder
 from tests import helpers
 
 
@@ -29,6 +30,34 @@ def test_crf_max_returns_correct_shape(test_data_for_shape_check: tuple) -> None
     model = CRF(num_tags)
 
     max_probabilities, tag_indices = model.max(logits)
+
+    assert max_probabilities.size() == torch.Size([batch_size])
+    assert tag_indices.size() == torch.Size([batch_size, sequence_length])
+
+
+def test_decoder_returns_correct_shape(test_data_for_shape_check: tuple) -> None:
+    (batch_size, sequence_length, num_tags), logits, _, _ = test_data_for_shape_check
+
+    model = CRF(num_tags)
+    decoder = Decoder()
+
+    max_probabilities, tag_indices = decoder(model(logits))
+
+    assert max_probabilities.size() == torch.Size([batch_size])
+    assert tag_indices.size() == torch.Size([batch_size, sequence_length])
+
+
+def test_constrained_decoder_returns_correct_shape(
+    test_data_for_shape_check: tuple,
+) -> None:
+    (batch_size, sequence_length, num_tags), logits, _, _ = test_data_for_shape_check
+
+    model = CRF(num_tags)
+    decoder = ConstrainedDecoder(
+        [True] * num_tags, [True] * num_tags, [[True] * num_tags] * num_tags
+    )
+
+    max_probabilities, tag_indices = decoder(model(logits))
 
     assert max_probabilities.size() == torch.Size([batch_size])
     assert tag_indices.size() == torch.Size([batch_size, sequence_length])
@@ -101,5 +130,31 @@ def test_crf_max_returns_score_valid_as_probability(
     )
 
     max_log_p, _ = model.max(logits)
+
+    assert torch.allclose(max_log_p, expected_log_p)
+
+
+def test_decoder_returns_correct_tag_indices(
+    model: CRF, test_data_by_hand: tuple
+) -> None:
+    _, logits, expected_tag_indices = test_data_by_hand
+    decoder = Decoder()
+
+    _, tag_indices = decoder(model(logits))
+
+    assert torch.equal(tag_indices, expected_tag_indices)
+
+
+def test_decoder_returns_score_valid_as_probability(
+    model: CRF, test_data_by_hand: tuple
+) -> None:
+    _, logits, tag_indices = test_data_by_hand
+    decoder = Decoder()
+    log_potentials = model(logits)
+    expected_log_p = crf.log_likelihood(
+        log_potentials, crf.to_tag_bitmap(tag_indices, log_potentials.size(-1))
+    )
+
+    max_log_p, _ = decoder(log_potentials)
 
     assert torch.allclose(max_log_p, expected_log_p)
