@@ -40,7 +40,7 @@ class CRF(nn.Module):
         num_tags = logits.size(-1)
         initial_mask = torch.eye(num_tags, num_tags, device=logits.device).bool()
 
-        # log potential from the dummy initial token to the first token
+        # log potential from the dummy initial token to the real initial token
         initial_log_potentials = logits[:, [0], :, None] * initial_mask + crf.NINF * (
             ~initial_mask
         )
