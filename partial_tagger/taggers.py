@@ -4,7 +4,7 @@ import torch
 from torch import nn
 
 from partial_tagger.functional import crf
-from partial_tagger.layers import CRF
+from partial_tagger.layers.crf import CRF, BaseDecoder, Decoder
 
 TaggerInputs = Union[
     torch.Tensor, Dict[Any, torch.Tensor], List[torch.Tensor], Tuple[torch.Tensor]
@@ -19,6 +19,7 @@ class CRFTagger(nn.Module):
         feature_extractor: Feature extraction network.
         num_tags: Number of tags.
         use_kernel: Boolean indicating if a kernel is used.
+        decoder: Decoder to computes the most likely tag sequence.
     """
 
     def __init__(
@@ -27,6 +28,7 @@ class CRFTagger(nn.Module):
         feature_extractor: nn.Module,
         num_tags: int,
         use_kernel: Optional[bool] = True,
+        decoder: Optional[BaseDecoder] = None,
     ) -> None:
         if feature_size != num_tags and not use_kernel:
             raise ValueError(
@@ -44,6 +46,12 @@ class CRFTagger(nn.Module):
             self.kernel = nn.Linear(feature_size, num_tags)
         else:
             self.kernel = nn.Identity()
+
+        self.decoder: BaseDecoder
+        if decoder is None:
+            self.decoder = Decoder()
+        else:
+            self.decoder = decoder
 
     def forward(
         self,
@@ -66,7 +74,9 @@ class CRFTagger(nn.Module):
             features = self.feature_extractor(inputs, mask)
             logits = self.kernel(features)
 
-        return self.crf_layer.max(logits, mask)
+        log_potentials = self.crf_layer(logits, mask)
+
+        return self.decoder(log_potentials, mask)
 
     def compute_loss(
         self,
@@ -130,7 +140,7 @@ class PartialCRFTagger(CRFTagger):
         return crf.marginal_log_likelihood(log_potentials, y, mask).sum().neg()
 
 
-class EERPartialCRFTagger(CRFTagger):
+class ExpectedEntityRatioPartialCRFTagger(CRFTagger):
     """A sequence tagger for partially annotated data with expected entity ratio loss.
 
     Args:
@@ -138,6 +148,7 @@ class EERPartialCRFTagger(CRFTagger):
         feature_extractor: Feature extraction network.
         num_tags: Number of tags.
         use_kernel: Boolean indicating if a kernel is used.
+        decoder: Decoder to computes the most likely tag sequence.
         outside_index: An integer value representing the O tag.
         eer_loss_weight: A float value representing EER loss coefficient.
         entity_ratio: A float value representing entity ratio.
@@ -150,13 +161,18 @@ class EERPartialCRFTagger(CRFTagger):
         feature_extractor: nn.Module,
         num_tags: int,
         use_kernel: bool = True,
+        decoder: Optional[BaseDecoder] = None,
         outside_index: int = 0,
         eer_loss_weight: float = 10.0,
         entity_ratio: float = 0.15,
         entity_ratio_margin: float = 0.05,
     ) -> None:
-        super(EERPartialCRFTagger, self).__init__(
-            feature_size, feature_extractor, num_tags, use_kernel
+        super(ExpectedEntityRatioPartialCRFTagger, self).__init__(
+            feature_size,
+            feature_extractor,
+            num_tags,
+            use_kernel,
+            decoder,
         )
 
         self.outside_index = outside_index

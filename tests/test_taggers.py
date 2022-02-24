@@ -4,7 +4,7 @@ from torch import nn
 
 from partial_tagger.taggers import (
     CRFTagger,
-    EERPartialCRFTagger,
+    ExpectedEntityRatioPartialCRFTagger,
     PartialCRFTagger,
     TaggerInputs,
 )
@@ -70,12 +70,14 @@ def test_partial_crf_tagger_compute_loss_returns_correct_shape(
     assert loss.size() == torch.Size()
 
 
-def test_eer_partial_crf_tagger_compute_loss_returns_correct_shape(
+def test_expected_entity_ratio_partial_crf_tagger_compute_loss_returns_correct_shape(
     test_data_for_shape_check: tuple,
 ) -> None:
     (_, _, num_tags), logits, _, tag_bitmap = test_data_for_shape_check
 
-    tagger = EERPartialCRFTagger(num_tags, DummyFeatureExtractor(), num_tags)
+    tagger = ExpectedEntityRatioPartialCRFTagger(
+        num_tags, DummyFeatureExtractor(), num_tags
+    )
 
     loss = tagger.compute_loss(logits, tag_bitmap)
 

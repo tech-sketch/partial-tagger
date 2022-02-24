@@ -24,17 +24,6 @@ def test_crf_forward_returns_correct_shape(test_data_for_shape_check: tuple) -> 
     )
 
 
-def test_crf_max_returns_correct_shape(test_data_for_shape_check: tuple) -> None:
-    (batch_size, sequence_length, num_tags), logits, _, _ = test_data_for_shape_check
-
-    model = CRF(num_tags)
-
-    max_probabilities, tag_indices = model.max(logits)
-
-    assert max_probabilities.size() == torch.Size([batch_size])
-    assert tag_indices.size() == torch.Size([batch_size, sequence_length])
-
-
 def test_decoder_returns_correct_shape(test_data_for_shape_check: tuple) -> None:
     (batch_size, sequence_length, num_tags), logits, _, _ = test_data_for_shape_check
 
@@ -108,30 +97,6 @@ def test_crf_forward_returns_tensor_if_sequence_length_equals_to_one(
     assert log_potentials.size() == torch.Size(
         [batch_size, sequence_length, num_tags, num_tags]
     )
-
-
-def test_crf_max_returns_correct_tag_indices(
-    model: CRF, test_data_by_hand: tuple
-) -> None:
-    _, logits, expected_tag_indices = test_data_by_hand
-
-    _, tag_indices = model.max(logits)
-
-    assert torch.equal(tag_indices, expected_tag_indices)
-
-
-def test_crf_max_returns_score_valid_as_probability(
-    model: CRF, test_data_by_hand: tuple
-) -> None:
-    _, logits, tag_indices = test_data_by_hand
-    log_potentials = model(logits)
-    expected_log_p = crf.log_likelihood(
-        log_potentials, crf.to_tag_bitmap(tag_indices, log_potentials.size(-1))
-    )
-
-    max_log_p, _ = model.max(logits)
-
-    assert torch.allclose(max_log_p, expected_log_p)
 
 
 def test_decoder_returns_correct_tag_indices(
