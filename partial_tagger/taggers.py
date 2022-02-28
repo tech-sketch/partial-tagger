@@ -200,16 +200,17 @@ class ExpectedEntityRatioPartialCRFTagger(CRFTagger):
 
         logits = self.kernel(features)
 
-        log_potentials = self.crf_layer(logits, mask)
+        with torch.enable_grad():
+            log_potentials = self.crf_layer(logits, mask)
 
-        # marginal likelihood
-        score = crf.multitag_sequence_score(log_potentials, y, mask)
-        log_Z = crf.forward_algorithm(log_potentials)
+            # log partition
+            log_Z = crf.forward_algorithm(log_potentials)
 
-        # expected entity ratio
-        p = torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)[0].sum(
-            dim=-1
-        )
+            # expected entity ratio
+            p = torch.autograd.grad(log_Z.sum(), log_potentials, create_graph=True)[
+                0
+            ].sum(dim=-1)
+
         if mask is not None:
             p *= mask[..., None]
         expected_entity_count = (
@@ -222,5 +223,8 @@ class ExpectedEntityRatioPartialCRFTagger(CRFTagger):
             - self.entity_ratio_margin,
             min=0,
         )
+
+        # marginal likelihood
+        score = crf.multitag_sequence_score(log_potentials, y, mask)
 
         return (log_Z - score).mean() + self.eer_loss_weight * eer_loss
