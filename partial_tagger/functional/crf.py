@@ -68,12 +68,16 @@ def marginal_log_likelihood(
     return score - log_Z
 
 
-def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tensor:
+def normalize(
+    log_potentials: torch.Tensor, matmul: Callable, normalizer: Callable
+) -> torch.Tensor:
     """Normalizes log potentials based on normalizer.
 
     Args:
         log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
+        matmul: A general matrix multiplication.
+        normalizer: A reduce operation.
 
     Returns:
         A [batch_size] float tensor representing the normalized value.
@@ -145,7 +149,7 @@ def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
     Returns:
         A [batch_size] float tensor representing the normalizer.
     """
-    return normalize(log_potentials, torch.logsumexp)
+    return normalize(log_potentials, log_matmul, torch.logsumexp)
 
 
 def amax(log_potentials: torch.Tensor) -> torch.Tensor:
@@ -162,7 +166,7 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
     def _amax(inputs: torch.Tensor, dim: int) -> torch.Tensor:
         return torch.max(inputs, dim=dim).values
 
-    return normalize(log_potentials, _amax)
+    return normalize(log_potentials, max_matmul, _amax)
 
 
 def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
