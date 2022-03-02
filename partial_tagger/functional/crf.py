@@ -118,6 +118,23 @@ def log_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
         return torch.logsumexp(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2)
 
 
+def max_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """Computes log-space max-sum operation instead of sum-prod operation
+    (ordinary matmul). This computation is numerical stable.
+
+    Args:
+        a: a log-space tensor.
+        b: a log-space tensor
+
+    Returns:
+        a computed tensor.
+    """
+    if is_genbmm_available():
+        return genbmm.maxbmm(a, b)
+    else:
+        return torch.max(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2).values
+
+
 def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
     """Computes the normalizer for a CRF.
 
