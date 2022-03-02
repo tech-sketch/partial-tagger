@@ -5,6 +5,24 @@ import torch
 NINF = torch.finfo(torch.float16).min
 
 
+def is_genbmm_available() -> bool:
+    """Checks if genbmm is available.
+
+    Returns:
+        A boolean indicating the genbmm availability.
+    """
+    try:
+        import _genbmm  # NOQA
+
+        return True
+    except ImportError:
+        return False
+
+
+if is_genbmm_available():
+    import genbmm
+
+
 def log_likelihood(
     log_potentials: torch.Tensor,
     tag_bitmap: torch.Tensor,
@@ -53,12 +71,16 @@ def marginal_log_likelihood(
     return score - log_Z
 
 
-def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tensor:
+def normalize(
+    log_potentials: torch.Tensor, matmul: Callable, normalizer: Callable
+) -> torch.Tensor:
     """Normalizes log potentials based on normalizer.
 
     Args:
         log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
+        matmul: A general matrix multiplication.
+        normalizer: A reduce operation.
 
     Returns:
         A [batch_size] float tensor representing the normalized value.
@@ -80,12 +102,44 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
     )
 
     for _ in range(n):
-        log_potentials = normalizer(
-            log_potentials[:, 0::2, ..., None] + log_potentials[:, 1::2, None, ...],
-            dim=-2,
-        )
+        log_potentials = matmul(log_potentials[:, 0::2], log_potentials[:, 1::2])
 
     return normalizer(normalizer(log_potentials, dim=-2), dim=-1).squeeze(dim=-1)
+
+
+def log_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """Computes log-space matrix multiplication. This method computes logsumexp-sum
+    operation instead of sum-prod operation (ordinary matmul). This computation is
+    numerical stable.
+
+    Args:
+        a: a log-space tensor.
+        b: a log-space tensor
+
+    Returns:
+        a computed tensor.
+    """
+    if is_genbmm_available():
+        return genbmm.logbmm(a, b)
+    else:
+        return torch.logsumexp(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2)
+
+
+def max_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """Computes log-space max-sum operation instead of sum-prod operation
+    (ordinary matmul). This computation is numerical stable.
+
+    Args:
+        a: a log-space tensor.
+        b: a log-space tensor
+
+    Returns:
+        a computed tensor.
+    """
+    if is_genbmm_available():
+        return genbmm.maxbmm(a, b)
+    else:
+        return torch.max(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2).values
 
 
 def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
@@ -98,7 +152,7 @@ def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
     Returns:
         A [batch_size] float tensor representing the normalizer.
     """
-    return normalize(log_potentials, torch.logsumexp)
+    return normalize(log_potentials, log_matmul, torch.logsumexp)
 
 
 def amax(log_potentials: torch.Tensor) -> torch.Tensor:
@@ -115,7 +169,7 @@ def amax(log_potentials: torch.Tensor) -> torch.Tensor:
     def _amax(inputs: torch.Tensor, dim: int) -> torch.Tensor:
         return torch.max(inputs, dim=dim).values
 
-    return normalize(log_potentials, _amax)
+    return normalize(log_potentials, max_matmul, _amax)
 
 
 def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
