@@ -1,5 +1,6 @@
 from typing import Callable, Optional, Tuple
 
+import genbmm
 import torch
 
 NINF = torch.finfo(torch.float16).min
@@ -94,12 +95,27 @@ def normalize(log_potentials: torch.Tensor, normalizer: Callable) -> torch.Tenso
     )
 
     for _ in range(n):
-        log_potentials = normalizer(
-            log_potentials[:, 0::2, ..., None] + log_potentials[:, 1::2, None, ...],
-            dim=-2,
-        )
+        log_potentials = matmul(log_potentials[:, 0::2], log_potentials[:, 1::2])
 
     return normalizer(normalizer(log_potentials, dim=-2), dim=-1).squeeze(dim=-1)
+
+
+def log_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
+    """Computes log-space matrix multiplication. This method computes logsumexp-sum
+    operation instead of sum-prod operation (ordinary matmul). This computation is
+    numerical stable.
+
+    Args:
+        a: a log-space tensor.
+        b: a log-space tensor
+
+    Returns:
+        a computed tensor.
+    """
+    if is_genbmm_available():
+        return genbmm.logbmm(a, b)
+    else:
+        return torch.logsumexp(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2)
 
 
 def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
