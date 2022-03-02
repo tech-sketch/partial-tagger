@@ -5,6 +5,20 @@ import torch
 NINF = torch.finfo(torch.float16).min
 
 
+def is_genbmm_available() -> bool:
+    """Checks if genbmm is available.
+
+    Returns:
+        A boolean indicating the genbmm availability.
+    """
+    try:
+        import _genbmm  # NOQA
+
+        return True
+    except ImportError:
+        return False
+
+
 def log_likelihood(
     log_potentials: torch.Tensor,
     tag_bitmap: torch.Tensor,
