@@ -1,6 +1,5 @@
 from typing import Callable, Optional, Tuple
 
-import genbmm
 import torch
 
 NINF = torch.finfo(torch.float16).min
@@ -18,6 +17,10 @@ def is_genbmm_available() -> bool:
         return True
     except ImportError:
         return False
+
+
+if is_genbmm_available():
+    import genbmm
 
 
 def log_likelihood(
