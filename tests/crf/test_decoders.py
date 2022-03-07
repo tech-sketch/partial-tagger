@@ -8,18 +8,22 @@ from partial_tagger.crf.decoders import ConstrainedViterbiDecoder, ViterbiDecode
 @pytest.fixture
 def crf(test_data_for_shape_check2: tuple) -> CRF:
     (
-        batch_size,
-        sequence_length,
-        feature_size,
-        num_tags,
-    ), _ = test_data_for_shape_check2
+        (
+            batch_size,
+            sequence_length,
+            feature_size,
+            num_tags,
+        ),
+        _,
+        _,
+    ) = test_data_for_shape_check2
     return CRF(feature_size, num_tags)
 
 
 def test_viterbi_decoder_returns_correct_shape(
     test_data_for_shape_check2: tuple, crf: CRF
 ) -> None:
-    (batch_size, sequence_length, _, _), text_features = test_data_for_shape_check2
+    (batch_size, sequence_length, _, _), text_features, _ = test_data_for_shape_check2
     decoder = ViterbiDecoder(crf)
     confidence, tag_indices = decoder(text_features)
 
@@ -31,11 +35,15 @@ def test_constrained_viterbi_decoder_returns_correct_shape(
     test_data_for_shape_check2: tuple, crf: CRF
 ) -> None:
     (
-        batch_size,
-        sequence_length,
+        (
+            batch_size,
+            sequence_length,
+            _,
+            num_tags,
+        ),
+        text_features,
         _,
-        num_tags,
-    ), text_features = test_data_for_shape_check2
+    ) = test_data_for_shape_check2
     decoder = ConstrainedViterbiDecoder(
         crf, [True] * num_tags, [True] * num_tags, [[True] * num_tags] * num_tags
     )

@@ -23,7 +23,13 @@ def test_data_for_shape_check2() -> tuple:
     feature_size = 128
     num_tags = 5
     text_features = torch.randn(batch_size, sequence_length, feature_size)
-    return (batch_size, sequence_length, feature_size, num_tags), text_features
+    y = torch.randint(0, num_tags, (batch_size, sequence_length))
+    tag_bitmap = torch.nn.functional.one_hot(y, num_tags).bool()
+    return (
+        (batch_size, sequence_length, feature_size, num_tags),
+        text_features,
+        tag_bitmap,
+    )
 
 
 @pytest.fixture
