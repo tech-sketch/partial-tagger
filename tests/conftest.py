@@ -17,6 +17,16 @@ def test_data_for_shape_check() -> tuple:
 
 
 @pytest.fixture
+def test_data_for_shape_check2() -> tuple:
+    batch_size = 3
+    sequence_length = 20
+    feature_size = 128
+    num_tags = 5
+    text_features = torch.randn(batch_size, sequence_length, feature_size)
+    return (batch_size, sequence_length, feature_size, num_tags), text_features
+
+
+@pytest.fixture
 def test_data_small() -> tuple:
     batch_size = 2
     sequence_length = 3
