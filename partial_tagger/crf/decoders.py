@@ -40,9 +40,10 @@ class ViterbiDecoder(Decoder):
         if mask is None:
             mask = text_features.new_ones(text_features.shape[:-1], dtype=torch.bool)
 
-        log_potentials = self.crf(text_features, mask)
+        with torch.enable_grad():
+            log_potentials = self.crf(text_features, mask)
 
-        max_log_probability, tag_indices = crf.decode(log_potentials)
+            max_log_probability, tag_indices = crf.decode(log_potentials)
 
         tag_indices = tag_indices * mask + self.padding_index * (~mask)
 
@@ -102,15 +103,16 @@ class ConstrainedViterbiDecoder(Decoder):
         if mask is None:
             mask = text_features.new_ones(text_features.shape[:-1], dtype=torch.bool)
 
-        log_potentials = self.crf(text_features, mask)
+        with torch.enable_grad():
+            log_potentials = self.crf(text_features, mask)
 
-        max_log_probability, tag_indices = crf.constrained_decode(
-            log_potentials,
-            mask=mask,
-            start_constraints=self.start_constraints,
-            end_constraints=self.end_constraints,
-            transition_constraints=self.transition_constraints,
-            padding_index=self.padding_index,
-        )
+            max_log_probability, tag_indices = crf.constrained_decode(
+                log_potentials,
+                mask=mask,
+                start_constraints=self.start_constraints,
+                end_constraints=self.end_constraints,
+                transition_constraints=self.transition_constraints,
+                padding_index=self.padding_index,
+            )
 
         return max_log_probability, tag_indices
