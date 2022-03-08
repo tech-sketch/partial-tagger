@@ -11,6 +11,7 @@ def model(feature_size: int, num_tags: int) -> CRF:
     return CRF(feature_size, num_tags)
 
 
+@torch.no_grad()
 def test_crf_forward_returns_correct_shape(
     model: CRF, test_data_for_shape_check2: tuple
 ) -> None:
@@ -25,14 +26,14 @@ def test_crf_forward_returns_correct_shape(
         _,
     ) = test_data_for_shape_check2
 
-    with torch.no_grad():
-        log_potentials = model(text_features)
+    log_potentials = model(text_features)
 
     assert log_potentials.size() == torch.Size(
         [batch_size, sequence_length, num_tags, num_tags]
     )
 
 
+@torch.no_grad()
 def test_crf_forward_returns_correct_shape_if_sequence_length_is_one(
     model: CRF, feature_size: int, num_tags: int
 ) -> None:
@@ -47,6 +48,7 @@ def test_crf_forward_returns_correct_shape_if_sequence_length_is_one(
     )
 
 
+@torch.no_grad()
 def test_crf_forward_returns_log_potentials_yield_likelihood_valid_as_probability(
     model: CRF, num_tags: int, test_data_small2: tuple
 ) -> None:
@@ -65,6 +67,7 @@ def test_crf_forward_returns_log_potentials_yield_likelihood_valid_as_probabilit
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
 
 
+@torch.no_grad()
 def test_crf_forward_returns_correctly_masked_log_potentials(
     model: CRF, feature_size: int
 ) -> None:

@@ -12,7 +12,7 @@ def model_for_shape_check(feature_size: int, num_tags: int) -> CRF:
 
 
 @pytest.fixture
-def model(num_tags: int, transitions: torch.Tensor) -> None:
+def model(num_tags: int, transitions: torch.Tensor) -> CRF:
     model = CRF(num_tags, num_tags)
     model.transitions.data = transitions
     model.kernel.weight.data = torch.eye(num_tags, num_tags)
@@ -20,6 +20,7 @@ def model(num_tags: int, transitions: torch.Tensor) -> None:
     return model
 
 
+@torch.no_grad()
 def test_viterbi_decoder_returns_correct_shape(
     model_for_shape_check: CRF, test_data_for_shape_check2: tuple
 ) -> None:
@@ -31,6 +32,7 @@ def test_viterbi_decoder_returns_correct_shape(
     assert tag_indices.size() == torch.Size([batch_size, sequence_length])
 
 
+@torch.no_grad()
 def test_constrained_viterbi_decoder_returns_correct_shape(
     model_for_shape_check: CRF, test_data_for_shape_check2: tuple
 ) -> None:
@@ -57,6 +59,7 @@ def test_constrained_viterbi_decoder_returns_correct_shape(
     assert tag_indices.size() == torch.Size([batch_size, sequence_length])
 
 
+@torch.no_grad()
 def test_decoder_returns_correct_tag_indices(
     model: CRF, test_data_by_hand: tuple
 ) -> None:
@@ -68,6 +71,7 @@ def test_decoder_returns_correct_tag_indices(
     assert torch.equal(tag_indices, expected_tag_indices)
 
 
+@torch.no_grad()
 def test_decoder_returns_score_valid_as_probability(
     model: CRF, test_data_by_hand: tuple
 ) -> None:

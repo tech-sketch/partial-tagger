@@ -24,6 +24,7 @@ def crf(test_data_for_shape_check2: tuple) -> CRF:
     return CRF(feature_size, num_tags)
 
 
+@torch.no_grad()
 def test_negative_log_likelihood_returns_correct_shape(
     test_data_for_shape_check2: tuple, crf: CRF
 ) -> None:
@@ -38,6 +39,7 @@ def test_negative_log_likelihood_returns_correct_shape(
     assert loss.size() == torch.Size()
 
 
+@torch.no_grad()
 def test_negative_marginal_log_likelihood_returns_correct_shape(
     test_data_for_shape_check2: tuple, crf: CRF
 ) -> None:
@@ -52,6 +54,7 @@ def test_negative_marginal_log_likelihood_returns_correct_shape(
     assert loss.size() == torch.Size()
 
 
+@torch.no_grad()
 def test_expected_entity_ratio_loss_returns_correct_shape(
     test_data_for_shape_check2: tuple, crf: CRF
 ) -> None:
