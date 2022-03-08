@@ -5,6 +5,16 @@ from partial_tagger.functional import crf
 
 
 @pytest.fixture
+def num_tags() -> int:
+    return 5
+
+
+@pytest.fixture
+def feature_size() -> int:
+    return 128
+
+
+@pytest.fixture
 def test_data_for_shape_check() -> tuple:
     batch_size = 3
     sequence_length = 20
@@ -44,6 +54,16 @@ def test_data_small() -> tuple:
     )
     log_potentials.requires_grad_()
     return (batch_size, sequence_length, num_tags), log_potentials
+
+
+@pytest.fixture
+def test_data_small2(feature_size: int, num_tags: int) -> tuple:
+    batch_size = 2
+    sequence_length = 3
+    text_features = torch.randn(batch_size, sequence_length, feature_size)
+    y = torch.randint(0, num_tags, (batch_size, sequence_length))
+    tag_bitmap = torch.nn.functional.one_hot(y, num_tags).bool()
+    return (batch_size, sequence_length), text_features, tag_bitmap
 
 
 @pytest.fixture

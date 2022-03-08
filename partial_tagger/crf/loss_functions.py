@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from partial_tagger.crf.core import CRF
+from partial_tagger.crf import CRF
 from partial_tagger.functional import crf
 from partial_tagger.loss_function import LossFunction
 
@@ -11,7 +11,7 @@ class NegativeLogLikelihood(LossFunction):
     """Negative log likelihood loss for CRF.
 
     Args:
-        crf: A crf layer.
+        crf: A CRF layer.
     """
 
     def __init__(self, crf: CRF) -> None:
@@ -44,7 +44,7 @@ class NegativeMarginalLogLikelihood(LossFunction):
     """Negative marginal log likelihood loss for CRF.
 
     Args:
-        crf: A crf layer.
+        crf: A CRF layer.
     """
 
     def __init__(self, crf: CRF) -> None:
@@ -77,7 +77,7 @@ class ExpectedEntityRatioLoss(LossFunction):
     """Expected entity ratio loss for CRF.
 
     Args:
-        crf: A crf layer.
+        crf: A CRF layer.
         outside_index: An integer value representing the O tag.
         eer_loss_weight: A float value representing EER loss coefficient.
         entity_ratio: A float value representing entity ratio.

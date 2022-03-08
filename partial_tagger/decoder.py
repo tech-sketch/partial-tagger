@@ -1,11 +1,11 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Optional, Tuple
 
 import torch
 from torch.nn import Module
 
 
-class Decoder(Module):
+class Decoder(ABC, Module):
     """Base class of all decoders."""
 
     @abstractmethod

@@ -1,11 +1,11 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Optional
 
 import torch
 from torch.nn import Module
 
 
-class LossFunction(Module):
+class LossFunction(ABC, Module):
     """Base class of all loss functions."""
 
     @abstractmethod

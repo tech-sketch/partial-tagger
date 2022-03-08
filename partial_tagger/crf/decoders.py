@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 import torch
 from torch import nn
 
-from partial_tagger.crf.core import CRF
+from partial_tagger.crf import CRF
 from partial_tagger.decoder import Decoder
 from partial_tagger.functional import crf
 
@@ -40,9 +40,10 @@ class ViterbiDecoder(Decoder):
         if mask is None:
             mask = text_features.new_ones(text_features.shape[:-1], dtype=torch.bool)
 
-        log_potentials = self.crf(text_features, mask)
+        with torch.enable_grad():
+            log_potentials = self.crf(text_features, mask)
 
-        max_log_probability, tag_indices = crf.decode(log_potentials)
+            max_log_probability, tag_indices = crf.decode(log_potentials)
 
         tag_indices = tag_indices * mask + self.padding_index * (~mask)
 
@@ -55,6 +56,9 @@ class ConstrainedViterbiDecoder(Decoder):
     Args:
         crf: A CRF layer.
         padding_index: An integer for padded elements.
+        start_constraints: A list of boolean indicating allowed start tags.
+        end_constraints: A list of boolean indicating allowed end tags. .
+        transition_constraints: A nested list of boolean indicating allowed transition.
     """
 
     def __init__(
@@ -99,15 +103,16 @@ class ConstrainedViterbiDecoder(Decoder):
         if mask is None:
             mask = text_features.new_ones(text_features.shape[:-1], dtype=torch.bool)
 
-        log_potentials = self.crf(text_features, mask)
+        with torch.enable_grad():
+            log_potentials = self.crf(text_features, mask)
 
-        max_log_probability, tag_indices = crf.constrained_decode(
-            log_potentials,
-            mask=mask,
-            start_constraints=self.start_constraints,
-            end_constraints=self.end_constraints,
-            transition_constraints=self.transition_constraints,
-            padding_index=self.padding_index,
-        )
+            max_log_probability, tag_indices = crf.constrained_decode(
+                log_potentials,
+                mask=mask,
+                start_constraints=self.start_constraints,
+                end_constraints=self.end_constraints,
+                transition_constraints=self.transition_constraints,
+                padding_index=self.padding_index,
+            )
 
         return max_log_probability, tag_indices
