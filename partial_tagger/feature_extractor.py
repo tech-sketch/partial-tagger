@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import ABC, abstractmethod
 from typing import Generic, Optional, TypeVar
 
 import torch
@@ -7,7 +7,7 @@ from torch.nn import Module
 TaggerInputs = TypeVar("TaggerInputs")
 
 
-class FeatureExtractor(Module, Generic[TaggerInputs]):
+class FeatureExtractor(ABC, Generic[TaggerInputs], Module):
     """Base class of all feature extractors."""
 
     @abstractmethod

@@ -8,7 +8,7 @@ from .feature_extractor import FeatureExtractor, TaggerInputs
 from .loss_function import LossFunction
 
 
-class Tagger(Module, Generic[TaggerInputs]):
+class Tagger(Generic[TaggerInputs], Module):
     """Sequence tagger.
 
     Args:
