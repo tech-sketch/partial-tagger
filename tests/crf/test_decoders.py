@@ -1,7 +1,7 @@
 import pytest
 import torch
 
-from partial_tagger.crf.core import CRF
+from partial_tagger.crf import CRF
 from partial_tagger.crf.decoders import ConstrainedViterbiDecoder, ViterbiDecoder
 from partial_tagger.functional import crf
 

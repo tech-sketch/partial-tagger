@@ -2,7 +2,7 @@ from typing import Optional
 
 import torch
 
-from partial_tagger.crf.core import CRF
+from partial_tagger.crf import CRF
 from partial_tagger.functional import crf
 from partial_tagger.loss_function import LossFunction
 

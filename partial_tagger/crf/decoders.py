@@ -3,7 +3,7 @@ from typing import List, Optional, Tuple
 import torch
 from torch import nn
 
-from partial_tagger.crf.core import CRF
+from partial_tagger.crf import CRF
 from partial_tagger.decoder import Decoder
 from partial_tagger.functional import crf
 
