@@ -166,9 +166,10 @@ def test_constrained_decode_returns_tag_indices_under_constraints(
     end_constraints: torch.Tensor,
     transition_constraints: torch.Tensor,
 ) -> None:
-    _, tag_indices = crf.constrained_decode(
+    constrained_log_potentials = crf.constrain_log_potentials(
         log_potentials, mask, start_constraints, end_constraints, transition_constraints
     )
+    _, tag_indices = crf.decode(constrained_log_potentials)
 
     assert helpers.check_tag_indices_satisfies_constraints(
         tag_indices, start_constraints, end_constraints, transition_constraints

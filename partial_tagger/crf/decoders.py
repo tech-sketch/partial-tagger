@@ -106,13 +106,18 @@ class ConstrainedViterbiDecoder(Decoder):
         with torch.enable_grad():
             log_potentials = self.crf(text_features, mask)
 
-            max_log_probability, tag_indices = crf.constrained_decode(
+            constrained_log_potentials = crf.constrain_log_potentials(
                 log_potentials,
-                mask=mask,
-                start_constraints=self.start_constraints,
-                end_constraints=self.end_constraints,
-                transition_constraints=self.transition_constraints,
-                padding_index=self.padding_index,
+                mask,
+                self.start_constraints,
+                self.end_constraints,
+                self.transition_constraints,
             )
+
+            max_log_probability, tag_indices = crf.decode(
+                constrained_log_potentials,
+            )
+
+        tag_indices = tag_indices * mask + self.padding_index * (~mask)
 
         return max_log_probability, tag_indices
