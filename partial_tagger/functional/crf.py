@@ -197,16 +197,14 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
     return max_score - log_Z, tag_indices
 
 
-def constrained_decode(
+def constrain_log_potentials(
     log_potentials: torch.Tensor,
     mask: torch.Tensor,
     start_constraints: torch.Tensor,
     end_constraints: torch.Tensor,
     transition_constraints: torch.Tensor,
-    padding_index: Optional[int] = -1,
-) -> Tuple[torch.Tensor, torch.Tensor]:
-    """Computes the tag sequence gives the maximum probability for log potentials
-    with start/end/transition constraints.
+) -> torch.Tensor:
+    """Constrains start/end/transition to the given log potentials.
 
     Args:
         log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
@@ -215,12 +213,9 @@ def constrained_decode(
         start_constraints: A [num_tags] boolean tensor.
         end_constraints: A [num_tags] boolean tensor.
         transition_constraints: A [num_tags, num_tags] boolean tensor.
-        padding_index: An integer for padded elements.
 
     Returns:
-        A tuple of tensors. The first tensor is a [batch_size] float tensor
-        representing the maximum log probability. The second tensor is
-        a [batch_size, sequence_length] integer tensor representing the tag sequence.
+        A [batch_size, sequence_length, num_tags, num_tags] float tensor.
     """
     # Apply end constraints
     end_constraints = (
@@ -251,11 +246,7 @@ def constrained_decode(
         constrained_log_potentials * transition_constraints
         + NINF * (~transition_constraints)
     )
-
-    max_log_probability, tag_indices = decode(constrained_log_potentials)
-
-    tag_indices = tag_indices * mask + padding_index * (~mask)
-    return max_log_probability, tag_indices
+    return constrained_log_potentials
 
 
 def sequence_score(
