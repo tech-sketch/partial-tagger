@@ -30,7 +30,7 @@ Prepare incomplete tag sequence (partial annotation) and convert it to a tag bit
 This tag bitmap represents the target value for CRF and is used for loss function. 
 
 ```py
-# 0-4 indicates a normal tag
+# 0-4 indicates a true tag
 # -1 indicates that a tag is unknown 
 incomplete_tags = torch.tensor([[0, -1, 2, -1, 4, 0, 1, -1, 3, 4]])
 
@@ -48,6 +48,8 @@ sequence_length = 10
 text_features = torch.randn(batch_size, sequence_length, feature_size)
 
 loss_function = NegativeMarginalLogLikelihood(crf)
+# You can use ExpectedEntityRatioLoss.
+# loss_function = ExpectedEntityRatioLoss(crf, outside_index=0)
 
 loss = loss_function(text_features, tag_bitmap)
 ```
