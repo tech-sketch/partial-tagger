@@ -16,6 +16,6 @@ class BaseCRFEncoder(ABC, Module):
 
     @abstractmethod
     def forward(
-        self, embeddings: torch.Tensor, mask: Optional[torch.Tensor]
+        self, embeddings: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         pass
