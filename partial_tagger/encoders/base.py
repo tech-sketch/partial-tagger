@@ -8,6 +8,12 @@ from ..crf.nn import CRF
 
 
 class BaseCRFEncoder(ABC, Module):
+    """Base class of all encoders with CRF.
+
+    Args:
+        num_tags:  An integer representing the number of tags.
+    """
+
     def __init__(self, num_tags: int) -> None:
         super(BaseCRFEncoder, self).__init__()
 
@@ -18,4 +24,14 @@ class BaseCRFEncoder(ABC, Module):
     def forward(
         self, embeddings: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
+        """Computes log potentials from the given embeddings.
+
+        Args:
+            embeddings: A [batch_size, sequence_length, embedding_size] float tensor.
+            mask: A [batch_size, sequence_length] boolean tensor.
+
+        Returns:
+            A [batch_size, sequence_length, num_tag, num_tags] float tensor
+            representing log potentials.
+        """
         pass
