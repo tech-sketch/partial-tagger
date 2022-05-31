@@ -2,25 +2,7 @@ from typing import Callable, Optional, Tuple
 
 import torch
 
-NINF = torch.finfo(torch.float16).min
-
-
-def is_genbmm_available() -> bool:
-    """Checks if genbmm is available.
-
-    Returns:
-        A boolean indicating the genbmm availability.
-    """
-    try:
-        import _genbmm  # NOQA
-
-        return True
-    except ImportError:
-        return False
-
-
-if is_genbmm_available():
-    import genbmm
+from . import NINF
 
 
 def log_likelihood(
@@ -119,10 +101,7 @@ def log_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     Returns:
         a computed tensor.
     """
-    if is_genbmm_available():
-        return genbmm.logbmm(a, b)
-    else:
-        return torch.logsumexp(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2)
+    return torch.logsumexp(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2)
 
 
 def max_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
@@ -136,10 +115,7 @@ def max_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
     Returns:
         a computed tensor.
     """
-    if is_genbmm_available():
-        return genbmm.maxbmm(a, b)
-    else:
-        return torch.max(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2).values
+    return torch.max(a.unsqueeze(-1) + b.unsqueeze(-3), dim=-2).values
 
 
 def forward_algorithm(log_potentials: torch.Tensor) -> torch.Tensor:
@@ -181,11 +157,10 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 
     Returns:
         A tuple of tensors. The first tensor is a [batch_size] float tensor
-        representing the maximum log probability. The second tensor is
+        representing the maximum score. The second tensor is
         a [batch_size, sequence_length] integer tensor representing the tag sequence.
     """
     max_score = amax(log_potentials)
-    log_Z = forward_algorithm(log_potentials)
 
     (tag_matrix,) = torch.autograd.grad(max_score.sum(), log_potentials)
     tag_matrix = tag_matrix.long()
@@ -194,7 +169,7 @@ def decode(log_potentials: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
 
     tag_indices = tag_bitmap.argmax(dim=-1)
 
-    return max_score - log_Z, tag_indices
+    return max_score, tag_indices
 
 
 def constrain_log_potentials(

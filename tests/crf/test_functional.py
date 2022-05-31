@@ -3,7 +3,8 @@ from unittest.mock import patch
 import pytest
 import torch
 
-from partial_tagger.functional import crf
+from partial_tagger.crf import NINF
+from partial_tagger.crf import functional as F
 from tests import helpers
 
 
@@ -11,7 +12,7 @@ def test_log_likelihood_returns_correct_shape(test_data_for_shape_check: tuple) 
     (batch_size, _, _), _, log_potentials, tag_bitmap = test_data_for_shape_check
     expected_size = torch.Size([batch_size])
 
-    log_p = crf.log_likelihood(log_potentials, tag_bitmap)
+    log_p = F.log_likelihood(log_potentials, tag_bitmap)
 
     assert log_p.size() == expected_size
 
@@ -22,7 +23,7 @@ def test_marginal_log_likelihood_returns_correct_shape(
     (batch_size, _, _), _, log_potentials, tag_bitmap = test_data_for_shape_check
     expected_size = torch.Size([batch_size])
 
-    log_p = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
+    log_p = F.marginal_log_likelihood(log_potentials, tag_bitmap)
 
     assert log_p.size() == expected_size
 
@@ -30,12 +31,12 @@ def test_marginal_log_likelihood_returns_correct_shape(
 def test_log_likelihood_valid_as_probability(test_data_small: tuple) -> None:
     (batch_size, sequence_length, num_tags), log_potentials = test_data_small
 
-    total_log_p = torch.tensor([crf.NINF] * batch_size)
+    total_log_p = torch.tensor([NINF] * batch_size)
     for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(
         batch_size, sequence_length, num_tags
     ):
         total_log_p = torch.logaddexp(
-            total_log_p, crf.log_likelihood(log_potentials, tag_bitmap)
+            total_log_p, F.log_likelihood(log_potentials, tag_bitmap)
         )
 
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
@@ -46,7 +47,7 @@ def test_marginal_log_likelihood_valid_as_probability(test_data_small: tuple) ->
     shape, log_potentials = test_data_small
 
     tag_bitmap = torch.ones(shape, dtype=torch.bool)
-    log_p = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
+    log_p = F.marginal_log_likelihood(log_potentials, tag_bitmap)
 
     assert torch.allclose(log_p.exp(), torch.ones_like(log_p))
 
@@ -57,8 +58,8 @@ def test_marginal_log_likelihood_matches_log_likelihood_if_one_hot_tag_bitmap_is
     shape, log_potentials = test_data_small
 
     for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(*shape):
-        a = crf.log_likelihood(log_potentials, tag_bitmap)
-        b = crf.marginal_log_likelihood(log_potentials, tag_bitmap)
+        a = F.log_likelihood(log_potentials, tag_bitmap)
+        b = F.marginal_log_likelihood(log_potentials, tag_bitmap)
 
         assert torch.allclose(a, b)
 
@@ -68,7 +69,7 @@ def test_forward_algorithm_returns_value_same_as_brute_force(
 ) -> None:
     _, log_potentials = test_data_small
 
-    log_Z = crf.forward_algorithm(log_potentials)
+    log_Z = F.forward_algorithm(log_potentials)
     expected_log_Z = helpers.compute_log_normalizer_by_brute_force(log_potentials)
 
     assert torch.allclose(log_Z, expected_log_Z)
@@ -77,7 +78,7 @@ def test_forward_algorithm_returns_value_same_as_brute_force(
 def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
     _, log_potentials = test_data_small
 
-    max_score = crf.amax(log_potentials)
+    max_score = F.amax(log_potentials)
     expected_max_score, _ = helpers.compute_best_tag_indices_by_brute_force(
         log_potentials
     )
@@ -88,15 +89,14 @@ def test_amax_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
 def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> None:
     _, log_potentials = test_data_small
 
-    max_log_probability, tag_indices = crf.decode(log_potentials)
+    max_score, tag_indices = F.decode(log_potentials)
 
-    max_score, expected_tag_indices = helpers.compute_best_tag_indices_by_brute_force(
-        log_potentials
-    )
-    log_Z = helpers.compute_log_normalizer_by_brute_force(log_potentials)
-    expected_max_log_probability = max_score - log_Z
+    (
+        expected_max_score,
+        expected_tag_indices,
+    ) = helpers.compute_best_tag_indices_by_brute_force(log_potentials)
 
-    assert torch.allclose(max_log_probability, expected_max_log_probability)
+    assert torch.allclose(max_score, expected_max_score)
     assert torch.allclose(tag_indices, expected_tag_indices)
 
 
@@ -104,10 +104,10 @@ def test_sequence_score_computes_mask_correctly(
     test_data_with_mask: tuple,
 ) -> None:
     (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
-    tag_bitmap = crf.to_tag_bitmap(tag_indices, num_tags)
+    tag_bitmap = F.to_tag_bitmap(tag_indices, num_tags)
 
     with patch("torch.Tensor.mul") as m:
-        crf.sequence_score(log_potentials, tag_bitmap, mask)
+        F.sequence_score(log_potentials, tag_bitmap, mask)
         used_mask = m.call_args[0][0]
 
         assert helpers.check_sequence_score_mask(used_mask, tag_indices, mask)
@@ -121,10 +121,10 @@ def test_multitag_sequence_score_correctly_masks_log_potentials(
     test_data_with_mask: tuple, partial_index: int
 ) -> None:
     (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
-    tag_bitmap = crf.to_tag_bitmap(tag_indices, num_tags, partial_index=partial_index)
+    tag_bitmap = F.to_tag_bitmap(tag_indices, num_tags, partial_index=partial_index)
 
-    with patch("partial_tagger.functional.crf.forward_algorithm") as m:
-        crf.multitag_sequence_score(log_potentials, tag_bitmap, mask)
+    with patch("partial_tagger.crf.functional.forward_algorithm") as m:
+        F.multitag_sequence_score(log_potentials, tag_bitmap, mask)
         constrained_log_potentials = m.call_args[0][0]
 
         assert helpers.check_constrained_log_potentials(
@@ -166,10 +166,10 @@ def test_constrained_decode_returns_tag_indices_under_constraints(
     end_constraints: torch.Tensor,
     transition_constraints: torch.Tensor,
 ) -> None:
-    constrained_log_potentials = crf.constrain_log_potentials(
+    constrained_log_potentials = F.constrain_log_potentials(
         log_potentials, mask, start_constraints, end_constraints, transition_constraints
     )
-    _, tag_indices = crf.decode(constrained_log_potentials)
+    _, tag_indices = F.decode(constrained_log_potentials)
 
     assert helpers.check_tag_indices_satisfies_constraints(
         tag_indices, start_constraints, end_constraints, transition_constraints
@@ -237,6 +237,4 @@ def test_constrained_decode_returns_tag_indices_under_constraints(
 def test_tag_bitmap_returns_expected_value(
     tag_indices: torch.Tensor, num_tags: int, expected: torch.Tensor, partial_index: int
 ) -> None:
-    assert torch.equal(
-        crf.to_tag_bitmap(tag_indices, num_tags, partial_index), expected
-    )
+    assert torch.equal(F.to_tag_bitmap(tag_indices, num_tags, partial_index), expected)
