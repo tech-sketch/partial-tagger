@@ -36,6 +36,8 @@ class ViterbiDecoder(BaseCRFDecoder):
         if mask is None:
             mask = log_potentials.new_ones(log_potentials.shape[:-2], dtype=torch.bool)
 
+        log_potentials.requires_grad_()
+
         with torch.enable_grad():
             _, tag_indices = F.decode(log_potentials)
 
@@ -89,6 +91,8 @@ class ConstrainedViterbiDecoder(BaseCRFDecoder):
         """
         if mask is None:
             mask = log_potentials.new_ones(log_potentials.shape[:-2], dtype=torch.bool)
+
+        log_potentials.requires_grad_()
 
         with torch.enable_grad():
             constrained_log_potentials = F.constrain_log_potentials(
