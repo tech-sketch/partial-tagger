@@ -1,65 +1,36 @@
-from typing import Optional, Tuple
+from typing import Optional
 
 import torch
 
-from partial_tagger.decoder import Decoder
-from partial_tagger.feature_extractor import FeatureExtractor
-from partial_tagger.loss_function import LossFunction
+from partial_tagger.decoders.viterbi import ViterbiDecoder
+from partial_tagger.embedders import BaseEmbedder
+from partial_tagger.encoders.linear import LinearCRFEncoder
 from partial_tagger.tagger import Tagger
 
 
-class DummyFeatureExtractor(FeatureExtractor[torch.Tensor]):
+class PassThroughEmbedder(BaseEmbedder[torch.Tensor]):
     def forward(
         self, inputs: torch.Tensor, mask: Optional[torch.Tensor] = None
     ) -> torch.Tensor:
         return inputs
 
 
-class DummyLossFunction(LossFunction):
-    def forward(
-        self,
-        text_features: torch.Tensor,
-        y: torch.Tensor,
-        mask: Optional[torch.Tensor] = None,
-    ) -> torch.Tensor:
-        return text_features.sum()
-
-
-class DummyDecoder(Decoder):
-    def forward(
-        self, text_features: torch.Tensor, mask: Optional[torch.Tensor] = None
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        return text_features.sum(dim=(-1, -2)), text_features.sum(dim=-1).long()
-
-
-def test_tagger_compute_loss_returns_correct_shape(
-    test_data_for_shape_check2: tuple,
+def test_tagger_forward_returns_expected_shape_tensor(
+    test_data_for_shape_check: tuple,
 ) -> None:
-    _, text_features, tag_bitmap = test_data_for_shape_check2
-    feature_extractor = DummyFeatureExtractor()
-    loss_function = DummyLossFunction()
-    decoder = DummyDecoder()
+    embedding_size = 256
+    (batch_size, sequence_length, num_tags), *_ = test_data_for_shape_check
 
-    tagger = Tagger[torch.Tensor](feature_extractor, loss_function, decoder)
+    tagger = Tagger[torch.Tensor](
+        PassThroughEmbedder(),
+        LinearCRFEncoder(embedding_size, num_tags),
+        ViterbiDecoder(),
+    )
+    inputs = torch.randn((batch_size, sequence_length, embedding_size))
 
-    assert tagger.compute_loss(text_features, tag_bitmap).size() == torch.Size()
+    log_potentials, tag_indices = tagger(inputs)
 
-
-def test_tagger_predict_returns_correct_shape(
-    test_data_for_shape_check2: tuple,
-) -> None:
-    (
-        (batch_size, sequence_length, _, _),
-        text_features,
-        tag_bitmap,
-    ) = test_data_for_shape_check2
-    feature_extractor = DummyFeatureExtractor()
-    loss_function = DummyLossFunction()
-    decoder = DummyDecoder()
-
-    tagger = Tagger[torch.Tensor](feature_extractor, loss_function, decoder)
-
-    confidence, tag_indices = tagger.predict(text_features, tag_bitmap)
-
-    assert confidence.size() == torch.Size([batch_size])
+    assert log_potentials.size() == torch.Size(
+        [batch_size, sequence_length, num_tags, num_tags]
+    )
     assert tag_indices.size() == torch.Size([batch_size, sequence_length])
