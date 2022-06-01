@@ -35,11 +35,14 @@ class Tagger(Generic[EmbedderInputs], Module):
         """Computes log potentials and tag sequence.
 
         Args:
-            inputs: An inputs representing input data feeding into embedder.
+            inputs: An inputs representing input data feeding into an embedder.
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
-            A scalar float tensor representing loss.
+            A pair of a [batch_size, sequence_length, num_tags, num_tags] float tensor
+            and a [batch_size, sequence_length] integer tensor.
+            The float tensor representing log potentials and
+            the integer tensor representing tag sequence.
         """
         embeddings = self.embedder(inputs, mask)
         log_potentials = self.encoder(embeddings, mask)
