@@ -17,7 +17,7 @@ class BaseEmbedder(ABC, Generic[EmbedderInputs], Module):
         """Computes embeddings from the given inputs.
 
         Args:
-            inputs: Any inputs.
+            inputs: Any inputs feeding into an embedder.
             mask: A [batch_size, sequence_length] boolean tensor.
 
         Returns:
