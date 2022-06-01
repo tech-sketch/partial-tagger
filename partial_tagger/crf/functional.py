@@ -4,10 +4,13 @@ import torch
 
 from . import NINF
 
+# collections.abc.Callable is preferred.
+Matmul = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+
 
 def log_likelihood(
     log_potentials: torch.Tensor,
-    tag_bitmap: torch.Tensor,
+    tag_indices: torch.Tensor,
     mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Computes log likelihood.
@@ -15,15 +18,15 @@ def log_likelihood(
     Args:
         log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
-        tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
-        indicating an active tag at each index.
+        tag_indices: A [batch_size, sequence_length] integer tensor
+        indicating an active index.
         mask: A [batch_size, sequence_length] boolean tensor.
 
     Returns:
         A [batch_size] float tensor representing log likelihood.
     """
 
-    score = sequence_score(log_potentials, tag_bitmap, mask)
+    score = sequence_score(log_potentials, tag_indices, mask)
     log_Z = forward_algorithm(log_potentials)
 
     return score - log_Z
@@ -54,7 +57,7 @@ def marginal_log_likelihood(
 
 
 def normalize(
-    log_potentials: torch.Tensor, matmul: Callable, normalizer: Callable
+    log_potentials: torch.Tensor, matmul: Matmul, normalizer: Callable
 ) -> torch.Tensor:
     """Normalizes log potentials based on normalizer.
 
@@ -96,7 +99,7 @@ def log_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
     Args:
         a: a log-space tensor.
-        b: a log-space tensor
+        b: a log-space tensor.
 
     Returns:
         a computed tensor.
@@ -110,7 +113,7 @@ def max_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
     Args:
         a: a log-space tensor.
-        b: a log-space tensor
+        b: a log-space tensor.
 
     Returns:
         a computed tensor.
@@ -226,7 +229,7 @@ def constrain_log_potentials(
 
 def sequence_score(
     log_potentials: torch.Tensor,
-    tag_bitmap: torch.Tensor,
+    tag_indices: torch.Tensor,
     mask: Optional[torch.Tensor] = None,
 ) -> torch.Tensor:
     """Computes the sequence score based on the given tag_bitmap.
@@ -234,19 +237,19 @@ def sequence_score(
     Args:
         log_potentials: A [batch_size, sequence_length, num_tags, num_tags]
         float tensor.
-        tag_bitmap: A [batch_size, sequence_length, num_tags] boolean tensor
-        indicating an active tag at each index.
+        tag_indices: A [batch_size, sequence_length] integer tensor
+        indicating an active index.
         mask: A [batch_size, sequence_length] boolean tensor.
 
     Returns:
         A [batch_size] float tensor representing the sequence score.
     """
     if mask is None:
-        mask = tag_bitmap.new_ones(tag_bitmap.shape[:-1], dtype=torch.bool)
+        mask = torch.ones_like(tag_indices, dtype=torch.bool)
 
     num_tags = log_potentials.size(-1)
 
-    tag_bitmap = tag_bitmap & mask[..., None]
+    tag_bitmap = to_tag_bitmap(tag_indices, num_tags) & mask[..., None]
 
     initial_tag_matrix = (
         tag_bitmap[:, [0], :, None]

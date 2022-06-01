@@ -51,11 +51,9 @@ def test_crf_forward_returns_log_potentials_yield_likelihood_valid_as_probabilit
     log_potentials = model(logits)
 
     total_log_p = torch.tensor([F.NINF] * batch_size)
-    for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(
-        batch_size, sequence_length, num_tags
-    ):
+    for tag_indices in helpers.iterate_possible_tag_indices(sequence_length, num_tags):
         total_log_p = torch.logaddexp(
-            total_log_p, F.log_likelihood(log_potentials, tag_bitmap)
+            total_log_p, F.log_likelihood(log_potentials, torch.tensor(tag_indices))
         )
 
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))

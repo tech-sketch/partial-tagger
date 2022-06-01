@@ -11,7 +11,7 @@ class BaseCRFEncoder(ABC, Module):
     """Base class of all encoders with CRF.
 
     Args:
-        num_tags:  An integer representing the number of tags.
+        num_tags: An integer representing the number of tags.
     """
 
     def __init__(self, num_tags: int) -> None:

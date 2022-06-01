@@ -8,11 +8,13 @@ from partial_tagger.crf import functional as F
 from tests import helpers
 
 
-def test_log_likelihood_returns_correct_shape(test_data_for_shape_check: tuple) -> None:
-    (batch_size, _, _), _, log_potentials, tag_bitmap = test_data_for_shape_check
+def test_log_likelihood_returns_correct_shape(
+    test_data_for_shape_check3: tuple,
+) -> None:
+    (batch_size, _, _), _, log_potentials, tag_indices = test_data_for_shape_check3
     expected_size = torch.Size([batch_size])
 
-    log_p = F.log_likelihood(log_potentials, tag_bitmap)
+    log_p = F.log_likelihood(log_potentials, tag_indices)
 
     assert log_p.size() == expected_size
 
@@ -32,11 +34,9 @@ def test_log_likelihood_valid_as_probability(test_data_small: tuple) -> None:
     (batch_size, sequence_length, num_tags), log_potentials = test_data_small
 
     total_log_p = torch.tensor([NINF] * batch_size)
-    for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(
-        batch_size, sequence_length, num_tags
-    ):
+    for tag_indices in helpers.iterate_possible_tag_indices(sequence_length, num_tags):
         total_log_p = torch.logaddexp(
-            total_log_p, F.log_likelihood(log_potentials, tag_bitmap)
+            total_log_p, F.log_likelihood(log_potentials, torch.tensor(tag_indices))
         )
 
     assert torch.allclose(total_log_p.exp(), torch.ones_like(total_log_p))
@@ -58,7 +58,7 @@ def test_marginal_log_likelihood_matches_log_likelihood_if_one_hot_tag_bitmap_is
     shape, log_potentials = test_data_small
 
     for tag_bitmap in helpers.iterate_possible_one_hot_tag_bitmap(*shape):
-        a = F.log_likelihood(log_potentials, tag_bitmap)
+        a = F.log_likelihood(log_potentials, tag_bitmap.long().argmax(dim=-1))
         b = F.marginal_log_likelihood(log_potentials, tag_bitmap)
 
         assert torch.allclose(a, b)
@@ -103,11 +103,10 @@ def test_decode_returns_value_same_as_brute_force(test_data_small: tuple) -> Non
 def test_sequence_score_computes_mask_correctly(
     test_data_with_mask: tuple,
 ) -> None:
-    (_, _, num_tags), log_potentials, tag_indices, mask = test_data_with_mask
-    tag_bitmap = F.to_tag_bitmap(tag_indices, num_tags)
+    _, log_potentials, tag_indices, mask = test_data_with_mask
 
     with patch("torch.Tensor.mul") as m:
-        F.sequence_score(log_potentials, tag_bitmap, mask)
+        F.sequence_score(log_potentials, tag_indices, mask)
         used_mask = m.call_args[0][0]
 
         assert helpers.check_sequence_score_mask(used_mask, tag_indices, mask)
@@ -159,7 +158,7 @@ def test_multitag_sequence_score_correctly_masks_log_potentials(
         ),
     ],
 )
-def test_constrained_decode_returns_tag_indices_under_constraints(
+def test_constrained_decode_returns_expected_tag_indices_under_constraints(
     log_potentials: torch.Tensor,
     mask: torch.Tensor,
     start_constraints: torch.Tensor,

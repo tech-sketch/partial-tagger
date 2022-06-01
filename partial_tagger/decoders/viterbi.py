@@ -44,7 +44,7 @@ class ViterbiDecoder(BaseCRFDecoder):
         return tag_indices * mask + self.padding_index * (~mask)
 
 
-class ConstrainedViterbiDecoder(BaseCRFDecoder):
+class ConstrainedViterbiDecoder(ViterbiDecoder):
     """A constrained Viterbi decoder.
 
     Args:
@@ -61,7 +61,7 @@ class ConstrainedViterbiDecoder(BaseCRFDecoder):
         transition_constraints: List[List[bool]],
         padding_index: Optional[int] = -1,
     ) -> None:
-        super(ConstrainedViterbiDecoder, self).__init__()
+        super(ConstrainedViterbiDecoder, self).__init__(padding_index)
 
         self.start_constraints = nn.Parameter(
             torch.tensor(start_constraints), requires_grad=False
@@ -72,8 +72,6 @@ class ConstrainedViterbiDecoder(BaseCRFDecoder):
         self.transition_constraints = nn.Parameter(
             torch.tensor(transition_constraints), requires_grad=False
         )
-
-        self.padding_index = padding_index
 
     def forward(
         self, log_potentials: torch.Tensor, mask: Optional[torch.Tensor] = None
@@ -92,17 +90,14 @@ class ConstrainedViterbiDecoder(BaseCRFDecoder):
         if mask is None:
             mask = log_potentials.new_ones(log_potentials.shape[:-2], dtype=torch.bool)
 
-        log_potentials.requires_grad_()
+        constrained_log_potentials = F.constrain_log_potentials(
+            log_potentials,
+            mask,
+            self.start_constraints,
+            self.end_constraints,
+            self.transition_constraints,
+        )
 
-        with torch.enable_grad():
-            constrained_log_potentials = F.constrain_log_potentials(
-                log_potentials,
-                mask,
-                self.start_constraints,
-                self.end_constraints,
-                self.transition_constraints,
-            )
-
-            _, tag_indices = F.decode(constrained_log_potentials)
-
-        return tag_indices * mask + self.padding_index * (~mask)
+        return super(ConstrainedViterbiDecoder, self).forward(
+            constrained_log_potentials, mask
+        )
