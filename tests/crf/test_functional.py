@@ -159,7 +159,7 @@ def test_multitag_sequence_score_correctly_masks_log_potentials(
         ),
     ],
 )
-def test_constrained_decode_returns_tag_indices_under_constraints(
+def test_constrained_decode_returns_expected_tag_indices_under_constraints(
     log_potentials: torch.Tensor,
     mask: torch.Tensor,
     start_constraints: torch.Tensor,

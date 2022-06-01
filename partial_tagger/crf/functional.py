@@ -4,6 +4,9 @@ import torch
 
 from . import NINF
 
+# collections.abc.Callable is preferred.
+Matmul = Callable[[torch.Tensor, torch.Tensor], torch.Tensor]
+
 
 def log_likelihood(
     log_potentials: torch.Tensor,
@@ -54,7 +57,7 @@ def marginal_log_likelihood(
 
 
 def normalize(
-    log_potentials: torch.Tensor, matmul: Callable, normalizer: Callable
+    log_potentials: torch.Tensor, matmul: Matmul, normalizer: Callable
 ) -> torch.Tensor:
     """Normalizes log potentials based on normalizer.
 
@@ -96,7 +99,7 @@ def log_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
     Args:
         a: a log-space tensor.
-        b: a log-space tensor
+        b: a log-space tensor.
 
     Returns:
         a computed tensor.
@@ -110,7 +113,7 @@ def max_matmul(a: torch.Tensor, b: torch.Tensor) -> torch.Tensor:
 
     Args:
         a: a log-space tensor.
-        b: a log-space tensor
+        b: a log-space tensor.
 
     Returns:
         a computed tensor.
