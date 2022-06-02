@@ -31,10 +31,9 @@ def test_data_for_shape_check(num_tags: int) -> tuple:
 
 
 @pytest.fixture
-def test_data_small() -> tuple:
+def test_data_small(num_tags: int) -> tuple:
     batch_size = 2
     sequence_length = 3
-    num_tags = 5
     log_potentials = torch.randn(batch_size, sequence_length, num_tags, num_tags)
     initial_mask = torch.eye(num_tags, num_tags).bool()
     log_potentials[:, 0] = log_potentials[:, 0] * initial_mask + NINF * (~initial_mask)
@@ -57,10 +56,9 @@ def transitions() -> torch.Tensor:
 
 
 @pytest.fixture
-def test_data_by_hand() -> tuple:
+def test_data_by_hand(num_tags: int) -> tuple:
     batch_size = 2
     sequence_length = 3
-    num_tags = 5
     logits = torch.tensor(
         [
             [
@@ -80,16 +78,18 @@ def test_data_by_hand() -> tuple:
 
 
 @pytest.fixture
-def test_data_with_mask() -> tuple:
+def test_data_with_mask(num_tags: int) -> tuple:
     batch_size = 3
     sequence_length = 20
-    num_tags = 5
     log_potentials = torch.randn(batch_size, sequence_length, num_tags, num_tags)
     # a dummy initial token
     initial_mask = torch.eye(num_tags, num_tags).bool()
     log_potentials[:, 0] = log_potentials[:, 0] * initial_mask + NINF * (~initial_mask)
     mask = torch.tensor(
-        [[True] * (sequence_length - 2 * i) + [False] * 2 * i for i in range(3)]
+        [
+            [True] * (sequence_length - 2 * i) + [False] * 2 * i
+            for i in range(batch_size)
+        ]
     )
     tag_indices = torch.randint(0, num_tags, (batch_size, sequence_length))
     return (batch_size, sequence_length, num_tags), log_potentials, tag_indices, mask
