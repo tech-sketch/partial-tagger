@@ -6,14 +6,14 @@ marginal log likelihood for CRF (Tsuboi, et al., 2008). The implementation of th
 
 ## Usage
 
-First, import some classes.
+First, import some modules as follows.
 
 ```py
 from partial_tagger.crf.nn import CRF
 from partial_tagger.crf import functional as F
 ```
 
-Initialize `CRF` by giving it the dimension of feature vector and the number of tags.
+Initialize `CRF` by giving it the number of tags.
 
 ```py
 num_tags = 2
@@ -21,7 +21,7 @@ crf = CRF(num_tags)
 ```
 
 Prepare incomplete tag sequence (partial annotation) and convert it to a tag bitmap.  
-This tag bitmap represents the target value for CRF and is used for loss function.
+This tag bitmap represents the target value for CRF.
 
 ```py
 # 0-1 indicates a true tag
