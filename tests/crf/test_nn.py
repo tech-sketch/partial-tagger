@@ -16,7 +16,12 @@ def model(num_tags: int) -> CRF:
 def test_crf_forward_returns_expected_shape_tensor(
     model: CRF, test_data_for_shape_check: tuple
 ) -> None:
-    (batch_size, sequence_length, num_tags), logits, *_ = test_data_for_shape_check
+    (
+        (batch_size, sequence_length, _, num_tags),
+        _,
+        logits,
+        *_,
+    ) = test_data_for_shape_check
 
     log_potentials = model(logits)
 

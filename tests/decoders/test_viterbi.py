@@ -8,10 +8,11 @@ def test_viterbi_decoder_returns_expected_shape_tensor(
     test_data_for_shape_check: tuple,
 ) -> None:
     (
-        (batch_size, sequence_length, _),
+        (batch_size, sequence_length, _, num_tags),
+        _,
         _,
         log_potentials,
-        _,
+        *_,
     ) = test_data_for_shape_check
 
     decoder = ViterbiDecoder()
@@ -24,10 +25,11 @@ def test_constrained_viterbi_decoder_returns_expected_shape_tensor(
     test_data_for_shape_check: tuple,
 ) -> None:
     (
-        (batch_size, sequence_length, num_tags),
+        (batch_size, sequence_length, _, num_tags),
+        _,
         _,
         log_potentials,
-        _,
+        *_,
     ) = test_data_for_shape_check
 
     decoder = ConstrainedViterbiDecoder(

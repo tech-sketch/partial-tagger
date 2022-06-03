@@ -18,8 +18,12 @@ class PassThroughEmbedder(BaseEmbedder[torch.Tensor]):
 def test_tagger_forward_returns_expected_shape_tensor(
     test_data_for_shape_check: tuple,
 ) -> None:
-    embedding_size = 256
-    (batch_size, sequence_length, num_tags), *_ = test_data_for_shape_check
+    (
+        batch_size,
+        sequence_length,
+        embedding_size,
+        num_tags,
+    ), *_ = test_data_for_shape_check
 
     tagger = Tagger[torch.Tensor](
         PassThroughEmbedder(),
