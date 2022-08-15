@@ -135,6 +135,77 @@ def test_multitag_sequence_score_correctly_masks_log_potentials(
     "log_potentials, mask, start_constraints, end_constraints, transition_constraints",
     [
         (
+            torch.randn(3, 20, 5, 5),
+            torch.tensor(
+                [
+                    [True] * 20,
+                    [True] * 15 + [False] * 5,
+                    [True] * 8 + [False] * 12,
+                ],
+                dtype=torch.bool,
+            ),
+            torch.tensor([True, False, False, True, True]),  # 0, 3, 4 are allowed
+            torch.tensor([False, True, True, False, False]),  # 2, 3 are allowed
+            torch.tensor(
+                [
+                    [True, False, True, True, True],  # 0->1 is not allowed
+                    [True, True, True, True, True],  # no constraints
+                    [True, True, False, True, True],  # 2->2 is not allowed
+                    [True, False, True, True, True],  # 3->1 is not allowed
+                    [True, False, False, False, False],  # only 4->0 is allowed
+                ]
+            ),
+        )
+    ],
+)
+def test_constrain_log_potentials_correctly_masks_log_potentials(
+    log_potentials: torch.Tensor,
+    mask: torch.Tensor,
+    start_constraints: torch.Tensor,
+    end_constraints: torch.Tensor,
+    transition_constraints: torch.Tensor,
+) -> None:
+    constrained_log_potentials = F.constrain_log_potentials(
+        log_potentials, mask, start_constraints, end_constraints, transition_constraints
+    )
+    lengths = mask.sum(dim=-1)
+
+    for i, log_potential in enumerate(constrained_log_potentials):
+        # Check start constraints
+        for j, valid in enumerate(start_constraints):
+            assert torch.equal(
+                log_potential[0, j, j],
+                log_potentials[i, 0, j, j] if valid else torch.tensor(NINF),
+            )
+
+        # Check end constraints
+        for j, valid_e in enumerate(end_constraints):
+            end_index = lengths[i] - 1
+            if valid_e:
+                for k, valid_t in enumerate(transition_constraints[:, j]):
+                    assert torch.equal(
+                        log_potential[end_index, k, j],
+                        log_potentials[i, end_index, k, j]
+                        if valid_t
+                        else torch.tensor(NINF),
+                    )
+            else:
+                assert torch.all(log_potential[end_index, :, j] == NINF)
+
+        # Check transition constraints
+        for pos in range(1, lengths[i] - 1):
+            for j, row in enumerate(transition_constraints):
+                for k, valid in enumerate(row):
+                    assert torch.equal(
+                        log_potential[pos, j, k],
+                        log_potentials[i, pos, j, k] if valid else torch.tensor(NINF),
+                    )
+
+
+@pytest.mark.parametrize(
+    "log_potentials, mask, start_constraints, end_constraints, transition_constraints",
+    [
+        (
             torch.randn(3, 20, 5, 5, requires_grad=True),
             torch.ones((3, 20), dtype=torch.bool),
             torch.tensor([True, False, False, True, True]),  # 0, 3, 4 are allowed
