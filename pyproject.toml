@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "partial-tagger"
-version = "0.6.0"
+version = "0.6.1"
 description = "Sequence Tagger for Partially Annotated Dataset in PyTorch"
 authors = ["yasufumi <yasufumi.taniguchi@gmail.com>"]
 license = "MIT"
@@ -14,7 +14,7 @@ classifiers = [
 
 [tool.poetry.dependencies]
 python = "^3.8"
-torch = "^1.10.2"
+torch = "^1.11.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^5.2"

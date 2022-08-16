@@ -195,15 +195,10 @@ def constrain_log_potentials(
     Returns:
         A [batch_size, sequence_length, num_tags, num_tags] float tensor.
     """
-    # Apply end constraints
-    end_constraints = (
-        torch.arange(log_potentials.size(1), device=log_potentials.device)[None].lt(
-            mask.sum(dim=-1).sub(1)[..., None]
-        )
-        ^ (~mask)
-    )[..., None, None] | end_constraints[None, None, None]
-    constrained_log_potentials = log_potentials * end_constraints + NINF * (
-        ~end_constraints
+    # Apply transition constraints
+    transition_constraints = transition_constraints | (~mask[..., None, None])
+    constrained_log_potentials = log_potentials.masked_fill(
+        ~transition_constraints, NINF
     )
 
     # Apply start constraints
@@ -211,19 +206,18 @@ def constrain_log_potentials(
     start_constraints = (
         start_constraints
         & torch.eye(num_tags, num_tags, device=log_potentials.device).bool()
-    )[None]
-    constrained_log_potentials[:, 0] = constrained_log_potentials[
-        :, 0
-    ] * start_constraints + NINF * (~start_constraints)
+    )
+    constrained_log_potentials[:, 0] = log_potentials[:, 0].masked_fill(
+        ~start_constraints, NINF
+    )
 
-    # Apply transition constraints
-    transition_constraints = transition_constraints[None, None] | (
-        ~mask[..., None, None]
-    )
-    constrained_log_potentials = (
-        constrained_log_potentials * transition_constraints
-        + NINF * (~transition_constraints)
-    )
+    # Apply end constraints
+    batch_indices = torch.arange(log_potentials.size(0), device=log_potentials.device)
+    end_indices = mask.sum(dim=-1) - 1
+    constrained_log_potentials[batch_indices, end_indices] = constrained_log_potentials[
+        batch_indices, end_indices
+    ].masked_fill_(~end_constraints, NINF)
+
     return constrained_log_potentials
 
 
